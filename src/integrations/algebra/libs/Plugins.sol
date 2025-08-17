@@ -4,19 +4,13 @@ pragma solidity ^0.8.20;
 /// @title Contains logic and constants for interacting with the plugin through hooks
 /// @dev Allows pool to check which hooks are enabled, as well as control the return selector
 library Plugins {
-    function hasFlag(
-        uint8 pluginConfig,
-        uint256 flag
-    ) internal pure returns (bool res) {
+    function hasFlag(uint8 pluginConfig, uint256 flag) internal pure returns (bool res) {
         assembly {
             res := gt(and(pluginConfig, flag), 0)
         }
     }
 
-    function shouldReturn(
-        bytes4 selector,
-        bytes4 expectedSelector
-    ) internal pure {
+    function shouldReturn(bytes4 selector, bytes4 expectedSelector) internal pure {
         require(selector == expectedSelector, "Plugins: Invalid selector");
     }
 

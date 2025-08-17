@@ -16,12 +16,7 @@ abstract contract StatelessSplitter is IStatelessSplitter {
     event SharesUpdated(address[] recipients, uint256[] sharesBps);
 
     /// @notice Emitted after a successful split operation (ETH or ERC20)
-    event SplitExecuted(
-        address indexed token,
-        uint256 totalAmount,
-        address[] recipients,
-        uint256[] amounts
-    );
+    event SplitExecuted(address indexed token, uint256 totalAmount, address[] recipients, uint256[] amounts);
 
     // ========== Constants ==========
 
@@ -44,22 +39,14 @@ abstract contract StatelessSplitter is IStatelessSplitter {
     // ========== Public Methods ==========
 
     /// @inheritdoc IStatelessSplitter
-    function updateShares(
-        address[] calldata _recipients,
-        uint256[] calldata _sharesBps
-    ) external override {
+    function updateShares(address[] calldata _recipients, uint256[] calldata _sharesBps) external override {
         _onlyAdmin();
         _setShares(_recipients, _sharesBps);
         emit SharesUpdated(_recipients, _sharesBps);
     }
 
     /// @inheritdoc IStatelessSplitter
-    function getRecipients()
-        external
-        view
-        override
-        returns (address[] memory, uint256[] memory)
-    {
+    function getRecipients() external view override returns (address[] memory, uint256[] memory) {
         uint256[] memory out = new uint256[](recipients.length);
         for (uint256 i = 0; i < recipients.length; i++) {
             out[i] = sharesBps[recipients[i]];
@@ -75,10 +62,7 @@ abstract contract StatelessSplitter is IStatelessSplitter {
             address r = recipients[i];
             uint256 share = (amount * sharesBps[r]) / TOTAL_BPS;
             amounts[i] = share;
-            require(
-                IERC20(token).transferFrom(msg.sender, r, share),
-                "ERC20 transfer failed"
-            );
+            require(IERC20(token).transferFrom(msg.sender, r, share), "ERC20 transfer failed");
         }
 
         emit SplitExecuted(token, amount, recipients, amounts);
@@ -93,7 +77,7 @@ abstract contract StatelessSplitter is IStatelessSplitter {
             address r = recipients[i];
             uint256 share = (value * sharesBps[r]) / TOTAL_BPS;
             amounts[i] = share;
-            (bool success, ) = r.call{value: share}("");
+            (bool success,) = r.call{value: share}("");
             require(success, "ETH transfer failed");
         }
 
@@ -103,14 +87,8 @@ abstract contract StatelessSplitter is IStatelessSplitter {
     // ========== Internal Methods ==========
 
     /// @notice Internal function to update the share map and recipient list
-    function _setShares(
-        address[] memory _recipients,
-        uint256[] memory _sharesBps
-    ) internal {
-        require(
-            _recipients.length == _sharesBps.length,
-            "Recipients and shares length mismatch"
-        );
+    function _setShares(address[] memory _recipients, uint256[] memory _sharesBps) internal {
+        require(_recipients.length == _sharesBps.length, "Recipients and shares length mismatch");
 
         uint256 total;
         for (uint256 i = 0; i < recipients.length; i++) {

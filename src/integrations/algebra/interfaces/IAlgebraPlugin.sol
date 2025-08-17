@@ -13,30 +13,20 @@ interface IAlgebraPlugin {
     /// @param pluginFee0 Fee0 amount transferred to plugin
     /// @param pluginFee1 Fee1 amount transferred to plugin
     /// @return bytes4 The function selector
-    function handlePluginFee(
-        uint256 pluginFee0,
-        uint256 pluginFee1
-    ) external returns (bytes4);
+    function handlePluginFee(uint256 pluginFee0, uint256 pluginFee1) external returns (bytes4);
 
     /// @notice The hook called before the state of a pool is initialized
     /// @param sender The initial msg.sender for the initialize call
     /// @param sqrtPriceX96 The sqrt(price) of the pool as a Q64.96
     /// @return bytes4 The function selector for the hook
-    function beforeInitialize(
-        address sender,
-        uint160 sqrtPriceX96
-    ) external returns (bytes4);
+    function beforeInitialize(address sender, uint160 sqrtPriceX96) external returns (bytes4);
 
     /// @notice The hook called after the state of a pool is initialized
     /// @param sender The initial msg.sender for the initialize call
     /// @param sqrtPriceX96 The sqrt(price) of the pool as a Q64.96
     /// @param tick The current tick after the state of a pool is initialized
     /// @return bytes4 The function selector for the hook
-    function afterInitialize(
-        address sender,
-        uint160 sqrtPriceX96,
-        int24 tick
-    ) external returns (bytes4);
+    function afterInitialize(address sender, uint160 sqrtPriceX96, int24 tick) external returns (bytes4);
 
     /// @notice The hook called before a position is modified
     /// @param sender The initial msg.sender for the modify position call
@@ -127,13 +117,9 @@ interface IAlgebraPlugin {
     /// @param amount1 The amount of token1 being requested for flash
     /// @param data Data that passed through the callback
     /// @return bytes4 The function selector for the hook
-    function beforeFlash(
-        address sender,
-        address recipient,
-        uint256 amount0,
-        uint256 amount1,
-        bytes calldata data
-    ) external returns (bytes4);
+    function beforeFlash(address sender, address recipient, uint256 amount0, uint256 amount1, bytes calldata data)
+        external
+        returns (bytes4);
 
     /// @notice The hook called after flash
     /// @param sender The initial msg.sender for the flash call

@@ -15,10 +15,7 @@ contract AlgebraPlugin is IAlgebraPlugin, ReflexAfterSwap {
 
     address public immutable pool;
 
-    constructor(
-        address _pool,
-        address _reflexRouter
-    ) ReflexAfterSwap(_reflexRouter) {
+    constructor(address _pool, address _reflexRouter) ReflexAfterSwap(_reflexRouter) {
         pool = _pool;
         defaultPluginConfig = uint8(Plugins.AFTER_SWAP_FLAG);
     }
@@ -29,63 +26,47 @@ contract AlgebraPlugin is IAlgebraPlugin, ReflexAfterSwap {
     }
 
     /// @inheritdoc IAlgebraPlugin
-    function handlePluginFee(
-        uint256,
-        uint256
-    ) external view override onlyPool returns (bytes4) {
+    function handlePluginFee(uint256, uint256) external view override onlyPool returns (bytes4) {
         return IAlgebraPlugin.handlePluginFee.selector;
     }
 
-    function beforeInitialize(
-        address,
-        uint160
-    ) external view override onlyPool returns (bytes4) {
+    function beforeInitialize(address, uint160) external view override onlyPool returns (bytes4) {
         return IAlgebraPlugin.beforeInitialize.selector;
     }
 
-    function afterInitialize(
-        address,
-        uint160,
-        int24
-    ) external view override onlyPool returns (bytes4) {
+    function afterInitialize(address, uint160, int24) external view override onlyPool returns (bytes4) {
         return IAlgebraPlugin.afterInitialize.selector;
     }
 
     /// @dev unused
-    function beforeModifyPosition(
-        address,
-        address,
-        int24,
-        int24,
-        int128,
-        bytes calldata
-    ) external view override onlyPool returns (bytes4, uint24) {
+    function beforeModifyPosition(address, address, int24, int24, int128, bytes calldata)
+        external
+        view
+        override
+        onlyPool
+        returns (bytes4, uint24)
+    {
         return (IAlgebraPlugin.beforeModifyPosition.selector, 0);
     }
 
     /// @dev unused
-    function afterModifyPosition(
-        address,
-        address,
-        int24,
-        int24,
-        int128,
-        uint256,
-        uint256,
-        bytes calldata
-    ) external view override onlyPool returns (bytes4) {
+    function afterModifyPosition(address, address, int24, int24, int128, uint256, uint256, bytes calldata)
+        external
+        view
+        override
+        onlyPool
+        returns (bytes4)
+    {
         return IAlgebraPlugin.afterModifyPosition.selector;
     }
 
-    function beforeSwap(
-        address,
-        address,
-        bool,
-        int256,
-        uint160,
-        bool,
-        bytes calldata
-    ) external view override onlyPool returns (bytes4, uint24, uint24) {
+    function beforeSwap(address, address, bool, int256, uint160, bool, bytes calldata)
+        external
+        view
+        override
+        onlyPool
+        returns (bytes4, uint24, uint24)
+    {
         return (IAlgebraPlugin.beforeSwap.selector, 0, 0);
     }
 
@@ -105,26 +86,24 @@ contract AlgebraPlugin is IAlgebraPlugin, ReflexAfterSwap {
     }
 
     /// @dev unused
-    function beforeFlash(
-        address,
-        address,
-        uint256,
-        uint256,
-        bytes calldata
-    ) external view override onlyPool returns (bytes4) {
+    function beforeFlash(address, address, uint256, uint256, bytes calldata)
+        external
+        view
+        override
+        onlyPool
+        returns (bytes4)
+    {
         return IAlgebraPlugin.beforeFlash.selector;
     }
 
     /// @dev unused
-    function afterFlash(
-        address,
-        address,
-        uint256,
-        uint256,
-        uint256,
-        uint256,
-        bytes calldata
-    ) external view override onlyPool returns (bytes4) {
+    function afterFlash(address, address, uint256, uint256, uint256, uint256, bytes calldata)
+        external
+        view
+        override
+        onlyPool
+        returns (bytes4)
+    {
         return IAlgebraPlugin.afterFlash.selector;
     }
 }

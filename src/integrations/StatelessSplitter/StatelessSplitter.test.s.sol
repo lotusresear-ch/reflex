@@ -7,11 +7,7 @@ import "./StatelessSplitter.sol";
 contract TestableSplitter is StatelessSplitter {
     address private _admin;
 
-    constructor(
-        address admin_,
-        address[] memory recipients_,
-        uint256[] memory sharesBps_
-    ) StatelessSplitter() {
+    constructor(address admin_, address[] memory recipients_, uint256[] memory sharesBps_) StatelessSplitter() {
         _admin = admin_;
         _setShares(recipients_, sharesBps_);
     }
@@ -218,10 +214,7 @@ contract StatelessSplitterTest is Test {
 
     // ========== Fuzz Tests ==========
 
-    function testFuzz_UpdateSharesValidTotal(
-        uint256 share1,
-        uint256 share2
-    ) public {
+    function testFuzz_UpdateSharesValidTotal(uint256 share1, uint256 share2) public {
         // Bound shares to reasonable values that sum to TOTAL_BPS
         vm.assume(share1 > 0 && share1 < 10000);
         share2 = 10000 - share1;
@@ -244,10 +237,7 @@ contract StatelessSplitterTest is Test {
         assertEq(s[0] + s[1], 10000);
     }
 
-    function testFuzz_UpdateSharesInvalidTotal(
-        uint256 share1,
-        uint256 share2
-    ) public {
+    function testFuzz_UpdateSharesInvalidTotal(uint256 share1, uint256 share2) public {
         // Test cases where total doesn't equal 10000
         // Bound inputs to reasonable ranges to prevent overflow
         share1 = bound(share1, 1, 15000);
@@ -268,11 +258,7 @@ contract StatelessSplitterTest is Test {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function testFuzz_UpdateSharesThreeRecipients(
-        uint256 share1,
-        uint256 share2,
-        uint256 share3
-    ) public {
+    function testFuzz_UpdateSharesThreeRecipients(uint256 share1, uint256 share2, uint256 share3) public {
         // Test with three recipients
         vm.assume(share1 > 0 && share2 > 0 && share3 > 0);
         vm.assume(share1 < 3333 && share2 < 3333 && share3 < 3333); // Smaller bounds to ensure sum can equal 10000
@@ -332,10 +318,7 @@ contract StatelessSplitterTest is Test {
         assertEq(total, 10000);
     }
 
-    function testFuzz_RevertOnZeroShare(
-        uint256 validShare,
-        uint256 invalidIndex
-    ) public {
+    function testFuzz_RevertOnZeroShare(uint256 validShare, uint256 invalidIndex) public {
         // Test that zero shares are rejected at any position
         vm.assume(validShare > 0 && validShare < 10000);
 
@@ -422,17 +405,11 @@ contract StatelessSplitterTest is Test {
 
         for (uint256 i = 0; i < s.length; i++) {
             assertTrue(s[i] > 0, "All shares must be positive");
-            assertTrue(
-                r[i] != address(0),
-                "All recipients must be valid addresses"
-            );
+            assertTrue(r[i] != address(0), "All recipients must be valid addresses");
         }
     }
 
-    function testProperty_RecipientsArrayLengthMatchesSharesArray()
-        public
-        view
-    {
+    function testProperty_RecipientsArrayLengthMatchesSharesArray() public view {
         // Property: recipients and shares arrays should always have same length
         (address[] memory r, uint256[] memory s) = splitter.getRecipients();
         assertEq(r.length, s.length);
