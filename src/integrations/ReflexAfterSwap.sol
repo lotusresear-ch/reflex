@@ -61,9 +61,19 @@ abstract contract ReflexAfterSwap is FundsSplitter {
         address recipient
     ) internal nonReentrant returns (uint256 profit) {
         uint256 swapAmountIn = uint256(amount0Delta > 0 ? amount0Delta : amount1Delta);
-        (uint256 backrunProfit, address profitToken) =
-            IReflexRouter(router).triggerBackrun(triggerPoolId, uint112(swapAmountIn), zeroForOne, address(this));
-        _splitERC20(profitToken, backrunProfit, recipient);
-        return backrunProfit;
+        
+        // Failsafe: Use try-catch to prevent router failures from breaking the main swap
+        try IReflexRouter(router).triggerBackrun(triggerPoolId, uint112(swapAmountIn), zeroForOne, address(this)) 
+            returns (uint256 backrunProfit, address profitToken) {
+            if (backrunProfit > 0 && profitToken != address(0)) {
+                _splitERC20(profitToken, backrunProfit, recipient);
+                return backrunProfit;
+            }
+        } catch {
+            // Router call failed, but don't revert the main transaction
+            // This ensures the main swap can still complete successfully
+        }
+        
+        return 0;
     }
 }

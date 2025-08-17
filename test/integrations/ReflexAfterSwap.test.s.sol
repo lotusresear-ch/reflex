@@ -261,8 +261,14 @@ contract ReflexAfterSwapTest is Test {
     function testReflexAfterSwapRouterReverts() public {
         mockRouter.setShouldRevert(true);
 
-        vm.expectRevert("Mock router reverted");
-        reflexAfterSwap.testReflexAfterSwap(keccak256("revert-pool"), 1000, -500, true, alice);
+        // With the failsafe, the function should not revert but return 0 profit
+        uint256 profit = reflexAfterSwap.testReflexAfterSwap(keccak256("revert-pool"), 1000, -500, true, alice);
+        
+        // Verify failsafe behavior: no revert, zero profit returned
+        assertEq(profit, 0);
+        
+        // Verify no tokens were transferred since router failed
+        assertEq(profitToken.balanceOf(alice), 0);
     }
 
     // ========== Reentrancy Tests ==========

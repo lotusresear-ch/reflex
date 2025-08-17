@@ -7,19 +7,44 @@ This directory contains all test files for the Reflex project, organized followi
 ```
 test/
 ├── integrations/
+│   ├── algebra/
+│   │   └── BasePluginV3Factory.test.s.sol  # Tests for Algebra plugin factory
 │   ├── FundsSplitter/
-│   │   └── FundsSplitter.test.s.sol     # Tests for fund splitting functionality
-│   └── ReflexAfterSwap.test.s.sol       # Tests for backrun integration
+│   │   └── FundsSplitter.test.s.sol         # Tests for fund splitting functionality
+│   └── ReflexAfterSwap.test.s.sol           # Tests for backrun integration
 ├── utils/
-│   ├── TestUtils.sol                    # Shared testing utilities and MockToken
-│   ├── TestUtils.test.s.sol             # Tests for testing utilities
-│   └── README.md                        # Documentation for test utilities
-└── README.md                            # This file
+│   ├── TestUtils.sol                        # Shared testing utilities and MockToken
+│   ├── TestUtils.test.s.sol                 # Tests for testing utilities
+│   └── README.md                            # Documentation for test utilities
+└── README.md                                # This file
 ```
 
 ## Test Coverage
 
-### Integration Tests (55 tests)
+### Integration Tests (105 tests)
+
+**AlgebraBasePluginV3 Tests (15 tests)**
+
+- ✅ AfterSwap hook functionality and integration with ReflexAfterSwap
+- ✅ Router interaction and failsafe behavior when router fails
+- ✅ Trigger pool ID generation and validation
+- ✅ Access control (only pool can call hooks)
+- ✅ Integration with MockReflexRouter for backrun simulation
+- ✅ Multiple swap scenarios and state consistency
+- ✅ Fuzz testing for various input combinations
+- ✅ Edge cases with zero amounts, large amounts, and max values
+
+**BasePluginV3Factory Tests (30 tests)**
+
+- ✅ Constructor and initialization
+- ✅ Access control with Algebra factory permissions
+- ✅ Plugin creation flow (beforeCreatePoolHook, afterCreatePoolHook)
+- ✅ Manual plugin creation for existing pools
+- ✅ Reflex router setup and configuration
+- ✅ Default base fee configuration
+- ✅ Farming address management
+- ✅ Multiple plugin creation scenarios
+- ✅ Edge cases and error conditions
 
 **FundsSplitter Tests (37 tests)**
 
@@ -36,7 +61,7 @@ test/
 - ✅ Constructor and initialization
 - ✅ Access control with router admin
 - ✅ Backrun execution and profit distribution
-- ✅ Router interaction and error handling
+- ✅ Router interaction and failsafe error handling
 - ✅ Reentrancy protection
 - ✅ Multiple backrun scenarios
 - ✅ Edge cases and large amounts
