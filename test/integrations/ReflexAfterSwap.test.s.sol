@@ -7,53 +7,6 @@ import "@reflex/integrations/FundsSplitter/IFundsSplitter.sol";
 import "@reflex/interfaces/IReflexRouter.sol";
 import "../utils/TestUtils.sol";
 
-// Mock Reflex Router for testing
-contract MockReflexRouter is IReflexRouter {
-    address public reflexAdmin;
-    MockToken public profitToken;
-    uint256 public mockProfit;
-    bool public shouldRevert;
-
-    constructor(address _admin, address _profitToken) {
-        reflexAdmin = _admin;
-        profitToken = MockToken(_profitToken);
-        mockProfit = 1000 * 10 ** 18; // Default 1000 tokens profit
-    }
-
-    function getReflexAdmin() external view override returns (address) {
-        return reflexAdmin;
-    }
-
-    function setMockProfit(uint256 _profit) external {
-        mockProfit = _profit;
-    }
-
-    function setShouldRevert(bool _shouldRevert) external {
-        shouldRevert = _shouldRevert;
-    }
-
-    function setReflexAdmin(address _admin) external {
-        reflexAdmin = _admin;
-    }
-
-    function triggerBackrun(
-        bytes32, // triggerPoolId
-        uint112, // swapAmountIn
-        bool, // zeroForOne
-        address recipient
-    ) external override returns (uint256 profit, address token) {
-        require(!shouldRevert, "Mock router reverted");
-
-        profit = mockProfit;
-        token = address(profitToken);
-
-        // Transfer profit tokens to recipient
-        profitToken.mint(recipient, profit);
-
-        return (profit, token);
-    }
-}
-
 // Testable implementation of ReflexAfterSwap
 contract TestableReflexAfterSwap is ReflexAfterSwap {
     constructor(address _router, address[] memory _recipients, uint256[] memory _sharesBps) ReflexAfterSwap(_router) {
@@ -73,6 +26,8 @@ contract TestableReflexAfterSwap is ReflexAfterSwap {
 }
 
 contract ReflexAfterSwapTest is Test {
+    using TestUtils for *;
+
     TestableReflexAfterSwap public reflexAfterSwap;
     MockReflexRouter public mockRouter;
     MockToken public profitToken;
@@ -89,7 +44,7 @@ contract ReflexAfterSwapTest is Test {
 
     function setUp() public {
         profitToken = MockToken(TestUtils.createStandardMockToken());
-        mockRouter = new MockReflexRouter(admin, address(profitToken));
+        mockRouter = MockReflexRouter(TestUtils.createMockReflexRouter(admin, address(profitToken)));
 
         recipients = new address[](4);
         recipients[0] = alice;
@@ -138,7 +93,7 @@ contract ReflexAfterSwapTest is Test {
     }
 
     function testSetReflexRouter() public {
-        MockReflexRouter newRouter = new MockReflexRouter(admin, address(profitToken));
+        MockReflexRouter newRouter = MockReflexRouter(TestUtils.createMockReflexRouter(admin, address(profitToken)));
 
         vm.prank(admin);
         reflexAfterSwap.setReflexRouter(address(newRouter));
@@ -148,7 +103,7 @@ contract ReflexAfterSwapTest is Test {
     }
 
     function testSetReflexRouterUnauthorized() public {
-        MockReflexRouter newRouter = new MockReflexRouter(admin, address(profitToken));
+        MockReflexRouter newRouter = MockReflexRouter(TestUtils.createMockReflexRouter(admin, address(profitToken)));
 
         vm.prank(attacker);
         vm.expectRevert("Caller is not the reflex admin");
@@ -263,10 +218,10 @@ contract ReflexAfterSwapTest is Test {
 
         // With the failsafe, the function should not revert but return 0 profit
         uint256 profit = reflexAfterSwap.testReflexAfterSwap(keccak256("revert-pool"), 1000, -500, true, alice);
-        
+
         // Verify failsafe behavior: no revert, zero profit returned
         assertEq(profit, 0);
-        
+
         // Verify no tokens were transferred since router failed
         assertEq(profitToken.balanceOf(alice), 0);
     }
