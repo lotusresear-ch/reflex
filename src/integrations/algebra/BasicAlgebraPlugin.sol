@@ -79,7 +79,7 @@ contract AlgebraPlugin is IAlgebraPlugin, ReflexAfterSwap {
         bytes calldata
     ) external override onlyPool returns (bytes4) {
         bytes32 triggerPoolId = bytes32(uint256(uint160(msg.sender)));
-        _afterSwap(triggerPoolId, amount0Out, amount1Out, zeroToOne, recipient);
+        reflexAfterSwap(triggerPoolId, amount0Out, amount1Out, zeroToOne, recipient);
         return IAlgebraPlugin.afterSwap.selector;
     }
 

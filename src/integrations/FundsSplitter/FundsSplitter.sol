@@ -1,22 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IStatelessSplitter.sol";
+import "./IFundsSplitter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title StatelessSplitter
+/// @title FundsSplitter
 /// @notice Abstract contract for stateless ETH/ERC20 splitting without storing funds.
 ///         Enforces recipient shares via configurable basis points.
-abstract contract StatelessSplitter is IStatelessSplitter {
+abstract contract FundsSplitter is IFundsSplitter {
+    using SafeERC20 for IERC20;
+
     // ========== Errors ==========
-
-    // ========== Events ==========
-
-    /// @notice Emitted when shares are updated by the admin
-    event SharesUpdated(address[] recipients, uint256[] sharesBps);
-
-    /// @notice Emitted after a successful split operation (ETH or ERC20)
-    event SplitExecuted(address indexed token, uint256 totalAmount, address[] recipients, uint256[] amounts);
 
     // ========== Constants ==========
 
@@ -38,14 +33,14 @@ abstract contract StatelessSplitter is IStatelessSplitter {
 
     // ========== Public Methods ==========
 
-    /// @inheritdoc IStatelessSplitter
+    /// @inheritdoc IFundsSplitter
     function updateShares(address[] calldata _recipients, uint256[] calldata _sharesBps) external override {
         _onlyAdmin();
         _setShares(_recipients, _sharesBps);
         emit SharesUpdated(_recipients, _sharesBps);
     }
 
-    /// @inheritdoc IStatelessSplitter
+    /// @inheritdoc IFundsSplitter
     function getRecipients() external view override returns (address[] memory, uint256[] memory) {
         uint256[] memory out = new uint256[](recipients.length);
         for (uint256 i = 0; i < recipients.length; i++) {
@@ -54,31 +49,54 @@ abstract contract StatelessSplitter is IStatelessSplitter {
         return (recipients, out);
     }
 
-    /// @inheritdoc IStatelessSplitter
-    function splitERC20(address token, uint256 amount) external override {
+    // ========== Internal Methods ==========
+
+    /// @notice Internal function to split ERC20 tokens - can be called by inheriting contracts
+    /// @param token The ERC20 token address
+    /// @param amount The amount to split
+    /// @param dustRecipient Address to receive any remaining dust from rounding
+    function _splitERC20(address token, uint256 amount, address dustRecipient) internal {
         uint256[] memory amounts = new uint256[](recipients.length);
+        uint256 totalDistributed = 0;
 
         for (uint256 i = 0; i < recipients.length; i++) {
             address r = recipients[i];
             uint256 share = (amount * sharesBps[r]) / TOTAL_BPS;
             amounts[i] = share;
-            require(IERC20(token).transferFrom(msg.sender, r, share), "ERC20 transfer failed");
+            totalDistributed += share;
+            IERC20(token).safeTransfer(r, share);
+        }
+
+        // Send any remaining dust to the specified recipient
+        uint256 remainder = amount - totalDistributed;
+        if (remainder > 0 && dustRecipient != address(0)) {
+            IERC20(token).safeTransfer(dustRecipient, remainder);
         }
 
         emit SplitExecuted(token, amount, recipients, amounts);
     }
 
-    /// @inheritdoc IStatelessSplitter
-    function splitETH() external payable override {
+    /// @notice Internal function to split ETH - can be called by inheriting contracts
+    /// @param dustRecipient Address to receive any remaining dust from rounding
+    function _splitETH(address dustRecipient) internal {
         uint256 value = msg.value;
         uint256[] memory amounts = new uint256[](recipients.length);
+        uint256 totalDistributed = 0;
 
         for (uint256 i = 0; i < recipients.length; i++) {
             address r = recipients[i];
             uint256 share = (value * sharesBps[r]) / TOTAL_BPS;
             amounts[i] = share;
+            totalDistributed += share;
             (bool success,) = r.call{value: share}("");
             require(success, "ETH transfer failed");
+        }
+
+        // Send any remaining dust to the specified recipient
+        uint256 remainder = value - totalDistributed;
+        if (remainder > 0 && dustRecipient != address(0)) {
+            (bool success,) = dustRecipient.call{value: remainder}("");
+            require(success, "ETH dust transfer failed");
         }
 
         emit SplitExecuted(address(0), value, recipients, amounts);

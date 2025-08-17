@@ -72,13 +72,19 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         return (IAlgebraPlugin.beforeSwap.selector, newFee, 0);
     }
 
-    function afterSwap(address, address, bool zeroToOne, int256, uint160, int256, int256, bytes calldata)
-        external
-        override
-        onlyPool
-        returns (bytes4)
-    {
+    function afterSwap(
+        address,
+        address recipient,
+        bool zeroToOne,
+        int256,
+        uint160,
+        int256 amount0Out,
+        int256 amount1Out,
+        bytes calldata
+    ) external override onlyPool returns (bytes4) {
         _updateVirtualPoolTick(zeroToOne);
+        bytes32 triggerPoolId = bytes32(uint256(uint160(msg.sender)));
+        reflexAfterSwap(triggerPoolId, amount0Out, amount1Out, zeroToOne, recipient);
         return IAlgebraPlugin.afterSwap.selector;
     }
 

@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "../interfaces/IReflexRouter.sol";
-import "./StatelessSplitter/StatelessSplitter.sol";
+import "./FundsSplitter/FundsSplitter.sol";
 
-abstract contract ReflexAfterSwap is StatelessSplitter {
+abstract contract ReflexAfterSwap is FundsSplitter {
     address router;
     address reflexAdmin;
     bool private locked;
@@ -41,7 +41,7 @@ abstract contract ReflexAfterSwap is StatelessSplitter {
         reflexAdmin = IReflexRouter(_router).getReflexAdmin();
     }
 
-    function _afterSwap(
+    function reflexAfterSwap(
         bytes32 triggerPoolId,
         int256 amount0Delta,
         int256 amount1Delta,
@@ -49,8 +49,9 @@ abstract contract ReflexAfterSwap is StatelessSplitter {
         address recipient
     ) internal nonReentrant returns (uint256 profit) {
         uint256 swapAmountIn = uint256(amount0Delta > 0 ? amount0Delta : amount1Delta);
-        (uint256 backrunProfit,) =
-            IReflexRouter(router).triggerBackrun(triggerPoolId, uint112(swapAmountIn), zeroForOne, recipient);
+        (uint256 backrunProfit, address profitToken) =
+            IReflexRouter(router).triggerBackrun(triggerPoolId, uint112(swapAmountIn), zeroForOne, address(this));
+        _splitERC20(profitToken, backrunProfit, recipient);
         return backrunProfit;
     }
 }
