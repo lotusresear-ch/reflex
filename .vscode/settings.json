@@ -1,9 +1,20 @@
 {
   "solidity.packageDefaultDependenciesContractsDirectory": "src",
   "solidity.packageDefaultDependenciesDirectory": "lib",
+  "solidity.remappings": [
+    "@reflex/=src/",
+    "@cryptoalgebra/=lib/Algebra/",
+    "@cryptoalgebra/core/=lib/Algebra/src/core/contracts/",
+    "@cryptoalgebra/integral-core/contracts/=lib/Algebra/src/core/contracts/",
+    "@cryptoalgebra/periphery/=lib/Algebra/src/periphery/contracts/",
+    "@cryptoalgebra/plugin/=lib/Algebra/src/plugin/contracts/",
+    "@cryptoalgebra/tokenomics/=lib/Algebra/src/tokenomics/contracts/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+  ],
   "editor.formatOnSave": true,
   "[solidity]": {
     "editor.defaultFormatter": "JuanBlanco.solidity"
   },
-  "solidity.formatter": "forge"
+  "solidity.formatter": "forge",
+  "solidity.compileUsingRemoteVersion": "v0.8.20"
 }
