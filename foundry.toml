@@ -4,6 +4,7 @@ out = "out"
 libs = ["lib"]
 solc = "0.8.20"
 remappings = [
+    "@reflex/=src/",
     "@cryptoalgebra/=lib/Algebra/",
     "@cryptoalgebra/core/=lib/Algebra/src/core/contracts/",
     "@cryptoalgebra/integral-core/contracts/=lib/Algebra/src/core/contracts/",

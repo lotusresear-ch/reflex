@@ -41,6 +41,18 @@ abstract contract ReflexAfterSwap is FundsSplitter {
         reflexAdmin = IReflexRouter(_router).getReflexAdmin();
     }
 
+    /// @notice Get the current router address
+    /// @return The address of the Reflex router
+    function getRouter() external view returns (address) {
+        return router;
+    }
+
+    /// @notice Get the current reflex admin address
+    /// @return The address of the reflex admin
+    function getReflexAdmin() external view returns (address) {
+        return reflexAdmin;
+    }
+
     function reflexAfterSwap(
         bytes32 triggerPoolId,
         int256 amount0Delta,

@@ -2,20 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "./FundsSplitter.sol";
-import "./IFundsSplitter.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-// OpenZeppelin ERC20 mock for testing
-contract MockToken is ERC20 {
-    constructor() ERC20("MockToken", "MOCK") {
-        _mint(msg.sender, 1000000 * 10 ** 18);
-    }
-
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
-    }
-}
+import "@reflex/integrations/FundsSplitter/FundsSplitter.sol";
+import "@reflex/integrations/FundsSplitter/IFundsSplitter.sol";
+import "../../utils/TestUtils.sol";
 
 contract TestableSplitter is FundsSplitter {
     address private _admin;
@@ -66,7 +55,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
 
     function setUp() public {
         admin = address(this);
-        token = new MockToken();
+        token = MockToken(TestUtils.createStandardMockToken());
 
         recipients = new address[](4);
         recipients[0] = alice;
