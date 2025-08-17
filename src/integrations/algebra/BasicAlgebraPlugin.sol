@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.20;
 
-import "./libs/Plugins.sol";
-
-import "./interfaces/IAlgebraPlugin.sol";
-
+import "@cryptoalgebra/core/interfaces/plugin/IAlgebraPlugin.sol";
+import "@cryptoalgebra/core/libraries/Plugins.sol";
 import "../ReflexAfterSwap.sol";
 
 contract AlgebraPlugin is IAlgebraPlugin, ReflexAfterSwap {
