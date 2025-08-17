@@ -75,15 +75,6 @@ The `test/utils/` directory contains shared utilities:
 - **TestUtils**: Library functions for creating tokens and test setup
 - See `test/utils/README.md` for detailed documentation
 
-## Benefits of Test Organization
-
-1. **Standard Structure**: Follows Foundry conventions with tests in `/test` directory
-2. **Clear Separation**: Test code separated from production contracts
-3. **Easy Navigation**: Hierarchical organization mirrors source structure
-4. **Shared Utilities**: Common testing components in dedicated utilities directory
-5. **Clean Imports**: Uses `@reflex/` remapping for cleaner source imports
-6. **Comprehensive Coverage**: 60 tests covering all functionality and edge cases
-
 ## Adding New Tests
 
 When adding new tests:
