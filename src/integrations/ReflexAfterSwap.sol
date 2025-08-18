@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "../interfaces/IReflexRouter.sol";
@@ -28,11 +28,11 @@ abstract contract ReflexAfterSwap is FundsSplitter, ReentrancyGuard {
     /// @notice Modifier to restrict access to reflex admin only
     /// @dev Reverts with "Not authorized" if caller is not the reflex admin
     modifier onlyReflexAdmin() {
-        _onlyAdmin();
+        _onlyFundsAdmin();
         _;
     }
 
-    function _onlyAdmin() internal view virtual override {
+    function _onlyFundsAdmin() internal view virtual override {
         require(msg.sender == reflexAdmin, "Caller is not the reflex admin");
     }
 

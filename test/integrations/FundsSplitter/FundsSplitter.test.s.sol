@@ -14,7 +14,7 @@ contract TestableSplitter is FundsSplitter {
         _setShares(recipients_, sharesBps_);
     }
 
-    function _onlyAdmin() internal view override {
+    function _onlyFundsAdmin() internal view override {
         require(msg.sender == _admin, "NotAdmin");
     }
 

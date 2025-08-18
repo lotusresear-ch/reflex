@@ -29,13 +29,13 @@ abstract contract FundsSplitter is IFundsSplitter {
     // ========== Access Control Hook ==========
 
     /// @notice Internal function that must be implemented by child contract to enforce admin access control
-    function _onlyAdmin() internal view virtual;
+    function _onlyFundsAdmin() internal view virtual;
 
     // ========== Public Methods ==========
 
     /// @inheritdoc IFundsSplitter
     function updateShares(address[] calldata _recipients, uint256[] calldata _sharesBps) external override {
-        _onlyAdmin();
+        _onlyFundsAdmin();
         _setShares(_recipients, _sharesBps);
         emit SharesUpdated(_recipients, _sharesBps);
     }

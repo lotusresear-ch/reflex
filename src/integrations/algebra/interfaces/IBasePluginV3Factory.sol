@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@cryptoalgebra/plugin/interfaces/IBasePluginV2Factory.sol";

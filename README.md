@@ -2,7 +2,7 @@
 
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.20-blue.svg)
 ![Foundry](https://img.shields.io/badge/Built%20with-Foundry-red.svg)
-![License](https://img.shields.io/badge/License-BUSL--1.1-yellow.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![MEV](https://img.shields.io/badge/MEV-Capture%20Engine-green.svg)
 ![DeFi](https://img.shields.io/badge/DeFi-Integration-purple.svg)
 ![Tests](https://img.shields.io/badge/Tests-105%20Passing-brightgreen.svg)

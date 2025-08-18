@@ -376,13 +376,13 @@ contract BasePluginV3FactoryTest is Test {
 
     // ========== Edge Cases ==========
 
-    function testConstants() public {
+    function testConstants() public view {
         assertEq(
             factory.ALGEBRA_BASE_PLUGIN_FACTORY_ADMINISTRATOR(), keccak256("ALGEBRA_BASE_PLUGIN_FACTORY_ADMINISTRATOR")
         );
     }
 
-    function testImmutableAlgebraFactory() public {
+    function testImmutableAlgebraFactory() public view {
         assertEq(factory.algebraFactory(), address(algebraFactory));
 
         // Cannot change immutable factory (this is just for documentation)
