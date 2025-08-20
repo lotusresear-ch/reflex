@@ -13,6 +13,9 @@ import "../../ReflexAfterSwap.sol";
 contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, VolatilityOraclePlugin, ReflexAfterSwap {
     using Plugins for uint8;
 
+    /// @notice Boolean flag to enable/disable ReflexAfterSwap functionality at plugin level
+    bool public reflexEnabled;
+
     /// @inheritdoc IAlgebraPlugin
     uint8 public constant override defaultPluginConfig =
         uint8(Plugins.AFTER_INIT_FLAG | Plugins.BEFORE_SWAP_FLAG | Plugins.AFTER_SWAP_FLAG | Plugins.DYNAMIC_FEE);
@@ -21,7 +24,25 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         AlgebraBasePlugin(_pool, _factory, _pluginFactory)
         SlidingFeePlugin(_baseFee)
         ReflexAfterSwap(_reflexRouter)
-    {}
+    {
+        reflexEnabled = true; // Enable reflex functionality by default
+    }
+
+    // ###### REFLEX CONTROL ######
+
+    /// @notice Enable or disable ReflexAfterSwap functionality
+    /// @param _enabled True to enable, false to disable
+    /// @dev Only callable by addresses with ALGEBRA_BASE_PLUGIN_MANAGER role
+    function setReflexEnabled(bool _enabled) external {
+        _authorize();
+        reflexEnabled = _enabled;
+    }
+
+    /// @notice Check if ReflexAfterSwap functionality is currently enabled
+    /// @return True if enabled, false if disabled
+    function isReflexEnabled() external view returns (bool) {
+        return reflexEnabled;
+    }
 
     // ###### HOOKS ######
 
@@ -83,8 +104,13 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         bytes calldata
     ) external override onlyPool returns (bytes4) {
         _updateVirtualPoolTick(zeroToOne);
-        bytes32 triggerPoolId = bytes32(uint256(uint160(msg.sender)));
-        reflexAfterSwap(triggerPoolId, amount0Out, amount1Out, zeroToOne, recipient);
+
+        // Only trigger ReflexAfterSwap if it's enabled
+        if (reflexEnabled) {
+            bytes32 triggerPoolId = bytes32(uint256(uint160(msg.sender)));
+            reflexAfterSwap(triggerPoolId, amount0Out, amount1Out, zeroToOne, recipient);
+        }
+
         return IAlgebraPlugin.afterSwap.selector;
     }
 

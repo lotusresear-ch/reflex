@@ -13,6 +13,11 @@ contract TestableReflexAfterSwap is ReflexAfterSwap {
         _setShares(_recipients, _sharesBps);
     }
 
+    // Implement the required abstract function
+    function _onlyFundsAdmin() internal view override {
+        require(msg.sender == reflexAdmin, "Caller is not the reflex admin");
+    }
+
     // Expose internal function for testing
     function testReflexAfterSwap(
         bytes32 triggerPoolId,
@@ -329,6 +334,6 @@ contract ReflexAfterSwapTest is Test {
         reflexAfterSwap.testReflexAfterSwap(keccak256("event-pool"), 1000, -500, true, alice);
     }
 
-    // Event from IFundsSplitter
+    // Events
     event SplitExecuted(address indexed token, uint256 totalAmount, address[] recipients, uint256[] amounts);
 }
