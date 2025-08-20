@@ -10,19 +10,29 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 /// @dev Inherits from FundsSplitter to enable profit sharing among multiple recipients
 /// @dev Implements failsafe mechanisms to prevent router failures from affecting main swap operations
 abstract contract ReflexAfterSwap is FundsSplitter, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     /// @notice Address of the Reflex router contract
     address router;
 
     /// @notice Address of the reflex admin (authorized controller)
     address reflexAdmin;
 
+    /// @notice Percentage of profit to give to swap recipient (in basis points)
+    /// @dev 0 = no recipient share, 10000 = 100% to recipient (nothing to FundsSplitter)
+    uint256 public recipientShareBps;
+
+    /// @notice Maximum allowed recipient share (50% = 5000 bps)
+    uint256 public constant MAX_RECIPIENT_SHARE_BPS = 5000;
+
     /// @notice Constructor to initialize the ReflexAfterSwap contract
     /// @param _router Address of the Reflex router contract
-    /// @dev Validates router address and fetches the admin from the router
+    /// @dev Validates router address and fetches the admin from the router, sets recipient share to 0 by default
     constructor(address _router) {
         require(_router != address(0), "Invalid router address");
         router = _router;
         reflexAdmin = IReflexRouter(_router).getReflexAdmin();
+        recipientShareBps = 0; // No recipient share by default
     }
 
     /// @notice Modifier to restrict access to reflex admin only
@@ -57,6 +67,20 @@ abstract contract ReflexAfterSwap is FundsSplitter, ReentrancyGuard {
         return reflexAdmin;
     }
 
+    /// @notice Set the percentage of profit that goes to the swap recipient
+    /// @param _recipientShareBps Percentage in basis points (0-5000, where 5000 = 50%)
+    /// @dev Only callable by reflex admin, limited to maximum of 50%
+    function setRecipientShare(uint256 _recipientShareBps) external onlyReflexAdmin {
+        require(_recipientShareBps <= MAX_RECIPIENT_SHARE_BPS, "Recipient share too high");
+        recipientShareBps = _recipientShareBps;
+    }
+
+    /// @notice Get the current recipient share percentage
+    /// @return The recipient share in basis points
+    function getRecipientShare() external view returns (uint256) {
+        return recipientShareBps;
+    }
+
     /// @notice Main entry point for post-swap profit extraction via backrunning
     /// @param triggerPoolId Unique identifier for the pool that triggered the swap
     /// @param amount0Delta The change in token0 balance from the original swap
@@ -79,7 +103,20 @@ abstract contract ReflexAfterSwap is FundsSplitter, ReentrancyGuard {
         try IReflexRouter(router).triggerBackrun(triggerPoolId, uint112(swapAmountIn), zeroForOne, address(this))
         returns (uint256 backrunProfit, address profitToken) {
             if (backrunProfit > 0 && profitToken != address(0)) {
-                _splitERC20(profitToken, backrunProfit, recipient);
+                // Calculate recipient share
+                uint256 recipientAmount = (backrunProfit * recipientShareBps) / 10000;
+                uint256 remainingAmount = backrunProfit - recipientAmount;
+
+                // Transfer recipient share directly if any
+                if (recipientAmount > 0) {
+                    IERC20(profitToken).safeTransfer(recipient, recipientAmount);
+                }
+
+                // Split remaining amount through FundsSplitter if any
+                if (remainingAmount > 0) {
+                    _splitERC20(profitToken, remainingAmount, recipient);
+                }
+
                 return backrunProfit;
             }
         } catch {
