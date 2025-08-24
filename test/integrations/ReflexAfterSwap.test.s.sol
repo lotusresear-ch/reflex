@@ -13,6 +13,11 @@ contract TestableReflexAfterSwap is ReflexAfterSwap {
         _setShares(_recipients, _sharesBps);
     }
 
+    // Implement the required abstract function
+    function _onlyFundsAdmin() internal view override {
+        require(msg.sender == reflexAdmin, "Caller is not the reflex admin");
+    }
+
     // Expose internal function for testing
     function testReflexAfterSwap(
         bytes32 triggerPoolId,
@@ -329,6 +334,69 @@ contract ReflexAfterSwapTest is Test {
         reflexAfterSwap.testReflexAfterSwap(keccak256("event-pool"), 1000, -500, true, alice);
     }
 
-    // Event from IFundsSplitter
+    // ========== Recipient Share Tests ==========
+
+    function testRecipientShareDefault() public {
+        assertEq(reflexAfterSwap.getRecipientShare(), 0, "Default recipient share should be 0");
+    }
+
+    function testSetRecipientShare() public {
+        uint256 sharePercent = 2500; // 25%
+
+        vm.prank(admin);
+        reflexAfterSwap.setRecipientShare(sharePercent);
+
+        assertEq(reflexAfterSwap.getRecipientShare(), sharePercent, "Recipient share should be set correctly");
+    }
+
+    function testSetRecipientShareUnauthorized() public {
+        vm.prank(attacker);
+        vm.expectRevert("Caller is not the reflex admin");
+        reflexAfterSwap.setRecipientShare(1000);
+    }
+
+    function testSetRecipientShareTooHigh() public {
+        vm.prank(admin);
+        vm.expectRevert("Recipient share too high");
+        reflexAfterSwap.setRecipientShare(5001); // Over 50%
+    }
+
+    function testReflexAfterSwapWithRecipientShare() public {
+        uint256 profit = 1000;
+        uint256 recipientShare = 2500; // 25%
+        profitToken.mint(address(reflexAfterSwap), profit);
+
+        // Set recipient share to 25%
+        vm.prank(admin);
+        reflexAfterSwap.setRecipientShare(recipientShare);
+
+        // Set up the mock router to return profit
+        mockRouter.setMockProfit(profit);
+
+        uint256 result = reflexAfterSwap.testReflexAfterSwap(keccak256("recipient-share-pool"), 1000, -500, true, alice);
+
+        assertEq(result, profit, "Should return total profit");
+
+        // Calculate expected amounts
+        uint256 expectedRecipientAmount = (profit * recipientShare) / 10000; // 250
+        uint256 expectedRemainingAmount = profit - expectedRecipientAmount; // 750
+        uint256 expectedShareEach = expectedRemainingAmount / 4; // 187.5 -> 187 (due to rounding)
+        uint256 dust = expectedRemainingAmount - (expectedShareEach * 4); // Remaining dust goes to alice too
+
+        // Verify alice got both recipient share + her normal share + dust
+        uint256 expectedAliceTotal = expectedRecipientAmount + expectedShareEach + dust;
+        assertEq(
+            profitToken.balanceOf(alice),
+            expectedAliceTotal,
+            "Alice should receive recipient share + normal share + dust"
+        );
+
+        // Verify others got only their normal shares
+        assertEq(profitToken.balanceOf(bob), expectedShareEach, "Bob should receive normal share only");
+        assertEq(profitToken.balanceOf(charlie), expectedShareEach, "Charlie should receive normal share only");
+        assertEq(profitToken.balanceOf(diana), expectedShareEach, "Diana should receive normal share only");
+    }
+
+    // Events
     event SplitExecuted(address indexed token, uint256 totalAmount, address[] recipients, uint256[] amounts);
 }

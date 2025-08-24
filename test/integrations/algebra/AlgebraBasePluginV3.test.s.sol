@@ -10,6 +10,9 @@ import {IAlgebraPlugin} from "@cryptoalgebra/core/interfaces/plugin/IAlgebraPlug
 contract AlgebraBasePluginV3Test is Test {
     using TestUtils for *;
 
+    // Define the constant for authorization
+    bytes32 public constant ALGEBRA_BASE_PLUGIN_MANAGER = keccak256("ALGEBRA_BASE_PLUGIN_MANAGER");
+
     AlgebraBasePluginV3 public plugin;
     MockAlgebraPool public pool;
     MockAlgebraFactory public factory;
@@ -43,6 +46,9 @@ contract AlgebraBasePluginV3Test is Test {
 
         // Set pool in factory
         factory.setPool(address(pool), true);
+
+        // Grant the ALGEBRA_BASE_PLUGIN_MANAGER role to admin for testing
+        factory.grantRole(ALGEBRA_BASE_PLUGIN_MANAGER, admin);
 
         // Create plugin
         vm.prank(pluginFactory);
@@ -326,5 +332,92 @@ contract AlgebraBasePluginV3Test is Test {
             assertEq(call.token0In, i % 2 == 0);
             assertEq(call.swapAmountIn, uint112(1000e18 + i));
         }
+    }
+
+    // Tests for enable/disable functionality
+    function test_ReflexEnabled_DefaultState() public view {
+        // By default, reflex should be enabled
+        assertTrue(plugin.reflexEnabled());
+    }
+
+    function test_SetReflexEnabled_ByAuthorized() public {
+        // Admin should be able to disable reflex
+        vm.prank(admin);
+        plugin.setReflexEnabled(false);
+        assertFalse(plugin.reflexEnabled());
+
+        // And enable it again
+        vm.prank(admin);
+        plugin.setReflexEnabled(true);
+        assertTrue(plugin.reflexEnabled());
+    }
+
+    function test_SetReflexEnabled_Unauthorized() public {
+        // Unauthorized address should not be able to change state
+        vm.prank(recipient);
+        vm.expectRevert();
+        plugin.setReflexEnabled(false);
+
+        // State should remain unchanged
+        assertTrue(plugin.reflexEnabled());
+    }
+
+    function test_AfterSwap_DisabledReflex() public {
+        // First disable reflex
+        vm.prank(admin);
+        plugin.setReflexEnabled(false);
+
+        // Record initial state
+        uint256 initialCallCount = reflexRouter.getTriggerBackrunCallsLength();
+
+        // Perform swap - should not trigger reflex
+        vm.prank(address(pool));
+        plugin.afterSwap(address(0), recipient, true, 0, 0, 1000e18, -500e18, "");
+
+        // Verify no reflex call was made
+        assertEq(reflexRouter.getTriggerBackrunCallsLength(), initialCallCount);
+    }
+
+    function test_AfterSwap_EnabledReflex() public {
+        // Ensure reflex is enabled (default state)
+        assertTrue(plugin.reflexEnabled());
+
+        // Record initial state
+        uint256 initialCallCount = reflexRouter.getTriggerBackrunCallsLength();
+
+        // Perform swap - should trigger reflex
+        vm.prank(address(pool));
+        plugin.afterSwap(address(0), recipient, true, 0, 0, 1000e18, -500e18, "");
+
+        // Verify reflex call was made
+        assertEq(reflexRouter.getTriggerBackrunCallsLength(), initialCallCount + 1);
+    }
+
+    function test_ReflexToggle_MidOperation() public {
+        // Record initial state
+        uint256 initialCallCount = reflexRouter.getTriggerBackrunCallsLength();
+
+        // Perform swap with reflex enabled
+        vm.prank(address(pool));
+        plugin.afterSwap(address(0), recipient, true, 0, 0, 1000e18, -500e18, "");
+        assertEq(reflexRouter.getTriggerBackrunCallsLength(), initialCallCount + 1);
+
+        // Disable reflex
+        vm.prank(admin);
+        plugin.setReflexEnabled(false);
+
+        // Perform another swap - should not trigger reflex
+        vm.prank(address(pool));
+        plugin.afterSwap(address(0), recipient, false, 0, 0, 2000e18, -1000e18, "");
+        assertEq(reflexRouter.getTriggerBackrunCallsLength(), initialCallCount + 1);
+
+        // Re-enable reflex
+        vm.prank(admin);
+        plugin.setReflexEnabled(true);
+
+        // Perform another swap - should trigger reflex again
+        vm.prank(address(pool));
+        plugin.afterSwap(address(0), recipient, true, 0, 0, 3000e18, -1500e18, "");
+        assertEq(reflexRouter.getTriggerBackrunCallsLength(), initialCallCount + 2);
     }
 }
