@@ -284,16 +284,6 @@ forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key <
 cast call <contract_address> "reflexEnabled()" --rpc-url http://localhost:8545
 ```
 
-### Deployment
-
-```shell
-# Deploy to testnet
-forge script script/Deploy.s.sol --rpc-url <testnet_rpc> --private-key <private_key> --broadcast --verify
-
-# Verify contracts
-forge verify-contract <contract_address> <contract_name> --etherscan-api-key <api_key>
-```
-
 ## 🆘 Help
 
 ```shell
