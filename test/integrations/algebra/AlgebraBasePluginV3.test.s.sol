@@ -447,8 +447,8 @@ contract AlgebraBasePluginV3Test is Test {
             ""
         );
 
-        // Fee should be 0 for reflexRouter
-        assertEq(fee, 0);
+        // Fee should be 500 for reflexRouter
+        assertEq(fee, 500);
     }
 
     function test_BeforeSwap_NormalUserPaysBaseFee() public {
@@ -500,7 +500,7 @@ contract AlgebraBasePluginV3Test is Test {
             ""
         );
 
-        // Test reflexRouter gets zero fee
+        // Test reflexRouter gets 500 fee
         vm.prank(address(pool));
         (, uint24 reflexRouterFee,) = plugin.beforeSwap(
             address(reflexRouter), // sender = reflexRouter
@@ -512,10 +512,10 @@ contract AlgebraBasePluginV3Test is Test {
             ""
         );
 
-        // Only reflexRouter should get zero fee
+        // ReflexRouter should get 500 fee, others pay higher fees
         assertTrue(normalFee > 0);
         assertTrue(otherRouterFee > 0);
-        assertEq(reflexRouterFee, 0);
+        assertEq(reflexRouterFee, 500);
     }
 
     function test_BeforeSwap_FeeExemptionBothDirections() public {
@@ -545,9 +545,9 @@ contract AlgebraBasePluginV3Test is Test {
             ""
         );
 
-        // Both directions should have zero fee for reflexRouter
-        assertEq(feeZeroToOne, 0);
-        assertEq(feeOneToZero, 0);
+        // Both directions should have 500 fee for reflexRouter
+        assertEq(feeZeroToOne, 500);
+        assertEq(feeOneToZero, 500);
     }
 
     function test_BeforeSwap_FeeExemptionWithDifferentAmounts() public {
@@ -564,8 +564,8 @@ contract AlgebraBasePluginV3Test is Test {
             (, uint24 fee,) =
                 plugin.beforeSwap(address(reflexRouter), recipient, true, int256(amounts[i]), 0, false, "");
 
-            // Fee should always be 0 for reflexRouter regardless of amount
-            assertEq(fee, 0, string(abi.encodePacked("Fee should be 0 for amount: ", amounts[i])));
+            // Fee should always be 500 for reflexRouter regardless of amount
+            assertEq(fee, 500, string(abi.encodePacked("Fee should be 500 for amount: ", amounts[i])));
         }
     }
 
@@ -590,7 +590,7 @@ contract AlgebraBasePluginV3Test is Test {
         assertEq(selector, IAlgebraPlugin.beforeSwap.selector);
     }
 
-    function testFuzz_BeforeSwap_ReflexRouterAlwaysZeroFee(
+    function testFuzz_BeforeSwap_ReflexRouterAlwaysBaseFee(
         bool zeroToOne,
         int256 amountSpecified,
         address recipientAddr
@@ -604,8 +604,8 @@ contract AlgebraBasePluginV3Test is Test {
         (, uint24 fee,) =
             plugin.beforeSwap(address(reflexRouter), recipientAddr, zeroToOne, amountSpecified, 0, false, "");
 
-        // ReflexRouter should always get zero fee regardless of parameters
-        assertEq(fee, 0);
+        // ReflexRouter should always get 500 fee regardless of parameters
+        assertEq(fee, 500);
     }
 
     function testFuzz_BeforeSwap_NonReflexRouterPaysfee(
@@ -650,7 +650,7 @@ contract AlgebraBasePluginV3Test is Test {
             );
         }
 
-        // Now test that reflexRouter still gets zero fee
+        // Now test that reflexRouter still gets 500 fee
         vm.prank(address(pool));
         (, uint24 reflexFee,) = plugin.beforeSwap(address(reflexRouter), recipient, true, 1000e18, 0, false, "");
 
@@ -658,7 +658,7 @@ contract AlgebraBasePluginV3Test is Test {
         vm.prank(address(pool));
         (, uint24 normalFee,) = plugin.beforeSwap(normalUser, recipient, true, 1000e18, 0, false, "");
 
-        assertEq(reflexFee, 0);
+        assertEq(reflexFee, 500);
         assertTrue(normalFee > 0);
     }
 }
