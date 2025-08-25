@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.20;
 
-import "../../../utils/SwapSimulationTest.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAlgebraPool} from "@cryptoalgebra/core/interfaces/IAlgebraPool.sol";
 import {AlgebraBasePluginV3} from "@reflex/integrations/algebra/full/AlgebraBasePluginV3.sol";
 import {IFundsSplitter} from "@reflex/integrations/FundsSplitter/IFundsSplitter.sol";
 import {IReflexRouter} from "@reflex/interfaces/IReflexRouter.sol";
+import "@reflex/../test/utils/SwapSimulationTest.sol";
 
 contract HxSwapSimulationSpecs is SwapSimulationTest {
     using stdJson for string;
