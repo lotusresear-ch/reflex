@@ -89,7 +89,7 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         int24 lastTick = _getLastTick();
         uint16 newFee = _getFeeAndUpdateFactors(zeroToOne, currentTick, lastTick);
         if (sender == getRouter()) {
-            newFee = 0;
+            newFee = 500;
         }
         _writeTimepoint();
         return (IAlgebraPlugin.beforeSwap.selector, newFee, 0);
