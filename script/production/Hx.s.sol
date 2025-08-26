@@ -8,19 +8,23 @@ import {IFundsSplitter} from "@reflex/integrations/FundsSplitter/IFundsSplitter.
 import {IReflexRouter} from "@reflex/interfaces/IReflexRouter.sol";
 import "@reflex/../test/utils/SwapSimulationTest.sol";
 
+interface IAlgebraBaseV3Plugin {
+    function initializePlugin() external;
+}
+
 contract HxSwapSimulationSpecs is SwapSimulationTest {
     using stdJson for string;
 
     address ownerEOA = address(0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38);
-    address profitShareHolder1 = makeAddr("profitShareHolder_01");
-    address profitShareHolder2 = makeAddr("profitShareHolder_02");
+    address profitShareHolder1 = 0x4069c99e708b9395c7A519f97F7c09644f1B471C;
+    address profitShareHolder2 = 0xFF9FD2d95d8959C8C6f0ca88D32eCFB89aF6D546;
     address reflexRouterAddress = 0x0189D64B45f88380F8d2247963F8c571110Cc33b; // Reflex Router on hyperliquid-evm
     address algebraPoolFactoryOwner = 0xFF9FD2d95d8959C8C6f0ca88D32eCFB89aF6D546; // Pool factory owner, needed to set plugin
     string internal constant RPC_URL = "https://rpc.hypurrscan.io";
 
     function setUp() public {}
 
-    function setUpPool(address poolAddress) public {
+    function setUpPoolFromScratch(address poolAddress) public {
         // Deploy the AlgebraBasePluginV3 plugin
         vm.createSelectFork(RPC_URL);
         address factoryAddress = IAlgebraPool(poolAddress).factory();
@@ -32,11 +36,10 @@ contract HxSwapSimulationSpecs is SwapSimulationTest {
             new AlgebraBasePluginV3(poolAddress, factoryAddress, pluginFactoryAddress, baseFee, reflexRouterAddress);
         IAlgebraPool(poolAddress).setPlugin(address(plugin));
         vm.stopPrank();
-        vm.startPrank(poolAddress);
+        // vm.startPrank(poolAddress);
         (, int24 tick,,,,) = IAlgebraPool(poolAddress).globalState();
-        plugin.beforeInitialize(address(0), 0);
-        plugin.afterInitialize(address(0), 0, tick);
-        vm.stopPrank();
+        plugin.initializePlugin();
+        // vm.stopPrank();
         address reflexAdmin = IReflexRouter(reflexRouterAddress).getReflexAdmin();
         vm.startPrank(reflexAdmin);
         address[] memory shareHolders = new address[](2);
@@ -46,6 +49,15 @@ contract HxSwapSimulationSpecs is SwapSimulationTest {
         shares[0] = 5000;
         shares[1] = 5000;
         IFundsSplitter(plugin).updateShares(shareHolders, shares);
+        vm.stopPrank();
+    }
+
+    function setUpPool(address poolAddress) public {
+        // Deploy the AlgebraBasePluginV3 plugin
+        vm.createSelectFork(RPC_URL);
+        vm.startPrank(algebraPoolFactoryOwner);
+        IAlgebraPool(poolAddress).setPlugin(0xbFCc47af8E20A6D9a5ec468923f80F6Bd60b7382);
+        IAlgebraBaseV3Plugin(0xbFCc47af8E20A6D9a5ec468923f80F6Bd60b7382).initializePlugin();
         vm.stopPrank();
     }
 
