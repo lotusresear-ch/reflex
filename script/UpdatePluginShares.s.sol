@@ -7,11 +7,13 @@ import {AlgebraBasePluginV3} from "../src/integrations/algebra/full/AlgebraBaseP
 
 /**
  * @title UpdatePluginShares
- * @notice Script to update profit sharing configuration on AlgebraBasePluginV3 contract
+ * @notice Script to update profit sharing configuration on AlgebraBasePluginV3 contract(s)
  * @dev Run with: forge script script/UpdatePluginShares.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
  *
  * Environment Variables Required:
- * - PLUGIN_ADDRESS: Address of the deployed AlgebraBasePluginV3 contract
+ * - PLUGIN_ADDRESSES: Comma-separated list of deployed AlgebraBasePluginV3 contract addresses (e.g., "0x123...,0x456...")
+ *   OR
+ * - PLUGIN_ADDRESS: Single address of the deployed AlgebraBasePluginV3 contract (for backward compatibility)
  * - RECIPIENTS: Comma-separated list of recipient addresses (e.g., "0x123...,0x456...")
  * - SHARES: Comma-separated list of share amounts in basis points (e.g., "5000,3000,2000")
  *
@@ -21,13 +23,14 @@ import {AlgebraBasePluginV3} from "../src/integrations/algebra/full/AlgebraBaseP
  *
  * @dev Total shares must equal 10000 (100%)
  * @dev Only the reflex admin can update shares
+ * @dev When using multiple plugin addresses, the same share configuration will be applied to all plugins
  */
 contract UpdatePluginShares is Script {
-    // Contract reference
-    AlgebraBasePluginV3 public plugin;
+    // Contract references
+    AlgebraBasePluginV3[] public plugins;
 
     // Update parameters
-    address public pluginAddress;
+    address[] public pluginAddresses;
     address[] public recipients;
     uint256[] public sharesBps;
 
@@ -41,9 +44,13 @@ contract UpdatePluginShares is Script {
     event SharesUpdated(address indexed plugin, address[] recipients, uint256[] sharesBps);
 
     function setUp() public {
-        // Load plugin address
-        pluginAddress = vm.envAddress("PLUGIN_ADDRESS");
-        plugin = AlgebraBasePluginV3(pluginAddress);
+        // Load plugin addresses (supports both single and multiple)
+        _loadPluginAddresses();
+
+        // Initialize plugin contract references
+        for (uint256 i = 0; i < pluginAddresses.length; i++) {
+            plugins.push(AlgebraBasePluginV3(pluginAddresses[i]));
+        }
 
         // Parse recipients and shares from environment variables
         _parseRecipientsAndShares();
@@ -59,7 +66,10 @@ contract UpdatePluginShares is Script {
         console.log("=== Update Plugin Shares ===");
         console.log("Chain ID:", block.chainid);
         console.log("Sender:", msg.sender);
-        console.log("Plugin Address:", pluginAddress);
+        console.log("Plugin Count:", pluginAddresses.length);
+        for (uint256 i = 0; i < pluginAddresses.length; i++) {
+            console.log("Plugin", i + 1, "Address:", pluginAddresses[i]);
+        }
         console.log("");
 
         // Verify current state if requested
@@ -78,6 +88,27 @@ contract UpdatePluginShares is Script {
         }
 
         console.log("=== Update Complete ===");
+    }
+
+    function _loadPluginAddresses() internal {
+        // Try to load multiple plugin addresses first
+        try vm.envString("PLUGIN_ADDRESSES") returns (string memory addressesStr) {
+            string[] memory addressStrings = _splitString(addressesStr, ",");
+            pluginAddresses = new address[](addressStrings.length);
+            for (uint256 i = 0; i < addressStrings.length; i++) {
+                pluginAddresses[i] = vm.parseAddress(_trim(addressStrings[i]));
+            }
+            console.log("Loaded", pluginAddresses.length, "plugin addresses from PLUGIN_ADDRESSES");
+        } catch {
+            // Fall back to single plugin address for backward compatibility
+            try vm.envAddress("PLUGIN_ADDRESS") returns (address singleAddress) {
+                pluginAddresses = new address[](1);
+                pluginAddresses[0] = singleAddress;
+                console.log("Loaded single plugin address from PLUGIN_ADDRESS");
+            } catch {
+                revert("Must provide either PLUGIN_ADDRESSES or PLUGIN_ADDRESS environment variable");
+            }
+        }
     }
 
     function _parseRecipientsAndShares() internal {
@@ -117,10 +148,21 @@ contract UpdatePluginShares is Script {
     }
 
     function _validateParameters() internal view {
-        require(pluginAddress != address(0), "PLUGIN_ADDRESS cannot be zero");
+        require(pluginAddresses.length > 0, "At least one plugin address required");
+        require(pluginAddresses.length <= 20, "Too many plugin addresses (max 20)");
         require(recipients.length > 0, "At least one recipient required");
         require(recipients.length == sharesBps.length, "Recipients and shares length mismatch");
         require(recipients.length <= 10, "Too many recipients (max 10)");
+
+        // Validate plugin addresses are not zero
+        for (uint256 i = 0; i < pluginAddresses.length; i++) {
+            require(pluginAddresses[i] != address(0), "Plugin address cannot be zero");
+
+            // Check for duplicate plugin addresses
+            for (uint256 j = i + 1; j < pluginAddresses.length; j++) {
+                require(pluginAddresses[i] != pluginAddresses[j], "Duplicate plugin address detected");
+            }
+        }
 
         // Validate total shares equal 10000 (100%)
         uint256 totalShares = 0;
@@ -142,19 +184,23 @@ contract UpdatePluginShares is Script {
     }
 
     function _verifyCurrentState() internal view {
-        console.log("Current Plugin State:");
-        console.log("- Plugin Address:", address(plugin));
-        console.log("- Reflex Enabled:", plugin.reflexEnabled());
-        console.log("- Router Address:", plugin.getRouter());
-        console.log("- Reflex Admin:", plugin.getReflexAdmin());
+        console.log("Current Plugin States:");
 
-        // Get current recipients and shares
-        (address[] memory currentRecipients, uint256[] memory currentShares) = plugin.getRecipients();
-        console.log("- Current Recipients Count:", currentRecipients.length);
+        for (uint256 p = 0; p < plugins.length; p++) {
+            console.log("");
+            console.log("Plugin", p + 1, "(", pluginAddresses[p], "):");
+            console.log("- Reflex Enabled:", plugins[p].reflexEnabled());
+            console.log("- Router Address:", plugins[p].getRouter());
+            console.log("- Reflex Admin:", plugins[p].getReflexAdmin());
 
-        for (uint256 i = 0; i < currentRecipients.length; i++) {
-            console.log("  - Recipient:", currentRecipients[i]);
-            console.log("    Share:", currentShares[i], "bps");
+            // Get current recipients and shares
+            address[] memory currentRecipients = plugins[p].getRecipients();
+            console.log("- Current Recipients Count:", currentRecipients.length);
+
+            for (uint256 i = 0; i < currentRecipients.length; i++) {
+                uint256[] memory shares = plugins[p].getShares(currentRecipients);
+                console.log("  -", currentRecipients[i], ":", shares[i], "bps");
+            }
         }
         console.log("");
     }
@@ -174,69 +220,118 @@ contract UpdatePluginShares is Script {
     }
 
     function _simulateUpdate() internal {
-        console.log("Simulating updateShares call...");
+        console.log("Simulating updateShares call for", plugins.length, "plugin(s)...");
 
-        // Emit event for tracking
-        emit SharesUpdatePrepared(address(plugin), recipients, sharesBps, _getTotalShares());
+        for (uint256 p = 0; p < plugins.length; p++) {
+            console.log("Simulating Plugin", p + 1, "(", pluginAddresses[p], "):");
 
-        try plugin.updateShares(recipients, sharesBps) {
-            console.log("[ OK ] Simulation successful - updateShares would succeed");
-        } catch Error(string memory reason) {
-            console.log("[ FAIL ] Simulation failed:", reason);
-            revert("Simulation failed");
-        } catch {
-            console.log("[ FAIL ] Simulation failed with unknown error");
-            revert("Simulation failed with unknown error");
+            // Emit event for tracking
+            emit SharesUpdatePrepared(address(plugins[p]), recipients, sharesBps, _getTotalShares());
+
+            try plugins[p].updateShares(recipients, sharesBps) {
+                console.log("  [ OK ] Simulation successful - updateShares would succeed");
+            } catch Error(string memory reason) {
+                console.log("  [ FAIL ] Simulation failed:", reason);
+                revert(string(abi.encodePacked("Simulation failed for plugin ", vm.toString(p + 1), ": ", reason)));
+            } catch {
+                console.log("  [ FAIL ] Simulation failed with unknown error");
+                revert(
+                    string(abi.encodePacked("Simulation failed for plugin ", vm.toString(p + 1), " with unknown error"))
+                );
+            }
         }
+
+        console.log("All simulations completed successfully");
     }
 
     function _executeUpdate() internal {
-        console.log("Executing updateShares transaction...");
+        console.log("Executing updateShares transaction for", plugins.length, "plugin(s)...");
 
         vm.startBroadcast();
 
-        try plugin.updateShares(recipients, sharesBps) {
-            console.log("[ OK ] Shares updated successfully");
+        bool allSuccessful = true;
+        uint256 successCount = 0;
 
-            // Emit event
-            emit SharesUpdated(address(plugin), recipients, sharesBps);
-        } catch Error(string memory reason) {
-            console.log("[ FAIL ] Update failed:", reason);
-            revert("Update failed");
-        } catch {
-            console.log("[ FAIL ] Update failed with unknown error");
-            revert("Update failed with unknown error");
+        for (uint256 p = 0; p < plugins.length; p++) {
+            console.log("Updating Plugin", p + 1, "(", pluginAddresses[p], "):");
+
+            try plugins[p].updateShares(recipients, sharesBps) {
+                console.log("  [OK] Shares updated successfully");
+                successCount++;
+
+                // Emit event
+                emit SharesUpdated(address(plugins[p]), recipients, sharesBps);
+            } catch Error(string memory reason) {
+                console.log("  [FAIL] Update failed:", reason);
+                allSuccessful = false;
+                // Continue with other plugins instead of reverting
+            } catch {
+                console.log("  [FAIL] Update failed with unknown error");
+                allSuccessful = false;
+                // Continue with other plugins instead of reverting
+            }
         }
 
         vm.stopBroadcast();
 
-        // Verify the update
-        _verifyUpdate();
-    }
+        console.log("");
+        console.log("Update Summary:");
+        console.log("- Total Plugins:", plugins.length);
+        console.log("- Successful Updates:", successCount);
+        console.log("- Failed Updates:", plugins.length - successCount);
 
-    function _verifyUpdate() internal view {
-        console.log("Verifying update...");
-
-        (address[] memory newRecipients, uint256[] memory newShares) = plugin.getRecipients();
-        require(newRecipients.length == recipients.length, "Recipient count mismatch");
-
-        uint256 totalShares = 0;
-
-        for (uint256 i = 0; i < newRecipients.length; i++) {
-            bool found = false;
-            for (uint256 j = 0; j < recipients.length; j++) {
-                if (newRecipients[i] == recipients[j]) {
-                    require(newShares[i] == sharesBps[j], "Share mismatch");
-                    found = true;
-                    break;
-                }
-            }
-            require(found, "Unexpected recipient");
-            totalShares += newShares[i];
+        if (!allSuccessful) {
+            console.log("WARNING: Some plugin updates failed. Check logs above for details.");
         }
 
-        require(totalShares == 10000, "Total shares verification failed");
-        console.log("[ OK ] Update verified successfully");
+        // Verify successful updates
+        if (successCount > 0) {
+            _verifyUpdates();
+        }
+    }
+
+    function _verifyUpdates() internal view {
+        console.log("Verifying updates...");
+
+        for (uint256 p = 0; p < plugins.length; p++) {
+            console.log("Verifying Plugin", p + 1, "(", pluginAddresses[p], "):");
+
+            try plugins[p].getRecipients() returns (address[] memory newRecipients) {
+                if (newRecipients.length != recipients.length) {
+                    console.log("  [FAIL] Recipient count mismatch - update may have failed");
+                    continue;
+                }
+
+                uint256[] memory newShares = plugins[p].getShares(newRecipients);
+                uint256 totalShares = 0;
+                bool sharesMatch = true;
+
+                for (uint256 i = 0; i < newRecipients.length; i++) {
+                    bool found = false;
+                    for (uint256 j = 0; j < recipients.length; j++) {
+                        if (newRecipients[i] == recipients[j]) {
+                            if (newShares[i] != sharesBps[j]) {
+                                sharesMatch = false;
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        sharesMatch = false;
+                    }
+                    totalShares += newShares[i];
+                }
+
+                if (totalShares == 10000 && sharesMatch) {
+                    console.log("  [OK] Update verified successfully");
+                } else {
+                    console.log("  [FAIL] Verification failed - shares don't match expected values");
+                }
+            } catch {
+                console.log("  [FAIL] Verification failed - unable to read plugin state");
+            }
+        }
     }
 
     function _getTotalShares() internal view returns (uint256) {
@@ -344,6 +439,14 @@ contract UpdatePluginShares is Script {
     // Helper functions for testing and verification
     function getUpdateParameters() external view returns (address[] memory, uint256[] memory) {
         return (recipients, sharesBps);
+    }
+
+    function getPluginAddresses() external view returns (address[] memory) {
+        return pluginAddresses;
+    }
+
+    function getPluginCount() external view returns (uint256) {
+        return pluginAddresses.length;
     }
 
     function validateUpdateParameters() external view returns (bool) {
