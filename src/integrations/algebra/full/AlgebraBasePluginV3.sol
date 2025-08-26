@@ -16,6 +16,8 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
     /// @notice Boolean flag to enable/disable ReflexAfterSwap functionality at plugin level
     bool public reflexEnabled;
 
+    bool private initialized;
+
     /// @inheritdoc IAlgebraPlugin
     uint8 public constant override defaultPluginConfig =
         uint8(Plugins.AFTER_INIT_FLAG | Plugins.BEFORE_SWAP_FLAG | Plugins.AFTER_SWAP_FLAG | Plugins.DYNAMIC_FEE);
@@ -55,6 +57,16 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         _initialize_TWAP(tick);
 
         return IAlgebraPlugin.afterInitialize.selector;
+    }
+
+    function initializePlugin() external {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+        (, int24 tick,,) = _getPoolState();
+        _updatePluginConfigInPool(defaultPluginConfig);
+        _initialize_TWAP(tick);
     }
 
     /// @dev unused

@@ -61,11 +61,7 @@ contract AlgebraBasePluginV3Test is Test {
 
     /// @notice Helper function to initialize the plugin for beforeSwap tests
     function _initializePlugin() internal {
-        vm.prank(address(pool));
-        plugin.beforeInitialize(address(0), 0);
-
-        vm.prank(address(pool));
-        plugin.afterInitialize(address(0), 0, 0);
+        plugin.initializePlugin();
     }
 
     // ===== AfterSwap Hook Tests =====

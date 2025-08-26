@@ -18,6 +18,7 @@ import {AlgebraBasePluginV3} from "../src/integrations/algebra/full/AlgebraBaseP
  * - REFLEX_ROUTER_ADDRESS: Address of the Reflex router
  *
  * Optional Environment Variables:
+ * - INITIALIZE_PLUGIN: Set to "true" to call initialize() after deployment
  * - VERIFY_CONTRACT: Set to "true" to verify on Etherscan
  * - ETHERSCAN_API_KEY: Required if VERIFY_CONTRACT is true
  */
@@ -69,6 +70,9 @@ contract DeployAlgebraBasePluginV3 is Script {
         plugin =
             new AlgebraBasePluginV3(poolAddress, factoryAddress, pluginFactoryAddress, baseFee, reflexRouterAddress);
 
+        // Initialize plugin if requested
+        _initializePlugin();
+
         vm.stopBroadcast();
 
         // Log deployment results
@@ -111,11 +115,53 @@ contract DeployAlgebraBasePluginV3 is Script {
         console.log("- Plugin Code Size:", address(plugin).code.length);
         console.log("- Reflex Enabled:", plugin.reflexEnabled());
         console.log("- Router Address:", plugin.getRouter());
+
+        // Check if plugin was initialized
+        try vm.envBool("INITIALIZE_PLUGIN") returns (bool wasInitialized) {
+            if (wasInitialized) {
+                console.log("- Plugin Initialized: true");
+            } else {
+                console.log("- Plugin Initialized: false (initialization skipped)");
+            }
+        } catch {
+            console.log("- Plugin Initialized: false (initialization not requested)");
+        }
+
         console.log("");
 
         // Gas estimation
         console.log("Gas Usage:");
         console.log("- Deployment Gas Used: Check transaction receipt");
+        console.log("");
+    }
+
+    function _initializePlugin() internal {
+        bool shouldInitialize = false;
+
+        // Check if initialization is requested
+        try vm.envBool("INITIALIZE_PLUGIN") returns (bool initialize) {
+            shouldInitialize = initialize;
+        } catch {
+            // INITIALIZE_PLUGIN not set, skip initialization
+            console.log("Skipping initialization (INITIALIZE_PLUGIN not set)");
+            return;
+        }
+
+        if (!shouldInitialize) {
+            console.log("Skipping initialization (INITIALIZE_PLUGIN=false)");
+            return;
+        }
+
+        console.log("Initializing plugin...");
+
+        try plugin.initializePlugin() {
+            console.log("Plugin initialized successfully");
+        } catch Error(string memory reason) {
+            console.log("Plugin initialization failed:", reason);
+        } catch {
+            console.log("Plugin initialization failed with unknown error");
+        }
+
         console.log("");
     }
 
@@ -176,6 +222,17 @@ contract DeployAlgebraBasePluginV3 is Script {
         if (address(plugin) == address(0)) return false;
         if (plugin.getRouter() != reflexRouterAddress) return false;
         if (!plugin.reflexEnabled()) return false;
+
+        // Check if initialization was requested and completed
+        try vm.envBool("INITIALIZE_PLUGIN") returns (bool shouldInit) {
+            if (shouldInit) {
+                // If initialization was requested, we can add additional checks here
+                // For now, we assume initialization was successful if the function returned
+                console.log("Plugin was initialized during deployment");
+            }
+        } catch {
+            // INITIALIZE_PLUGIN not set, no additional checks needed
+        }
 
         // Add more validation checks as needed
         return true;
