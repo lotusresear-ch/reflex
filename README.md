@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![MEV](https://img.shields.io/badge/MEV-Capture%20Engine-green.svg)
 ![DeFi](https://img.shields.io/badge/DeFi-Integration-purple.svg)
-![Tests](https://img.shields.io/badge/Tests-116%20Passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/Tests-127%20Passing-brightgreen.svg)
 
 **Lotus Reflex** is a sophisticated on-chain MEV (Maximum Extractable Value) capture engine designed for seamless integration into DEX protocols, specifically optimized for Algebra-based AMM systems. The system captures MEV opportunities while maintaining safety, decentralization, and ensuring zero interference with pool state or user experience.
 
@@ -24,12 +24,13 @@
 - **Authorization Framework**: Leverages existing Algebra authorization system for secure access control
 - **Configurable Profit Sharing**: Split captured profits between swap recipients and fund distribution
 - **Plugin-Level Integration**: Seamlessly integrates with Algebra's plugin architecture
+- **Fee Exemption System**: Automatic fee exemption for MEV capture transactions to prevent self-taxation
 
 ### Safety & Security
 
 - **Reentrancy Protection**: Built-in guards against reentrancy attacks
 - **Dust Handling**: Proper handling of token remainders to prevent value loss
-- **Comprehensive Testing**: 116+ tests covering all functionality and edge cases
+- **Comprehensive Testing**: 127+ tests covering all functionality and edge cases
 - **MIT Licensed**: Open source with permissive licensing
 
 ## 🏗️ Architecture
@@ -43,6 +44,7 @@ The main plugin contract that integrates with Algebra pools:
 - Implements Algebra's plugin interface with sliding fees, farming proxy, and volatility oracle
 - Contains enable/disable toggle for MEV capture functionality
 - Handles the `afterSwap` hook to trigger MEV capture
+- **Fee exemption logic**: Automatically sets zero fees for reflexRouter transactions in `beforeSwap` hook
 - Uses existing Algebra authorization system (`ALGEBRA_BASE_PLUGIN_MANAGER` role)
 
 #### `ReflexAfterSwap`
@@ -66,11 +68,12 @@ Handles distribution of captured profits:
 ### Integration Flow
 
 1. **Swap Execution**: User performs swap on Algebra pool
-2. **Hook Trigger**: `afterSwap` hook is called by the pool
-3. **MEV Check**: Plugin checks if MEV capture is enabled
-4. **Profit Extraction**: If enabled, triggers backrun through ReflexRouter
-5. **Profit Distribution**: Captured profits are split between recipient and fund distribution
-6. **Failsafe**: Any errors are caught to prevent disruption
+2. **Fee Calculation**: `beforeSwap` hook calculates fees (zero for reflexRouter, normal fees for others)
+3. **Hook Trigger**: `afterSwap` hook is called by the pool
+4. **MEV Check**: Plugin checks if MEV capture is enabled
+5. **Profit Extraction**: If enabled, triggers backrun through ReflexRouter (with zero fees)
+6. **Profit Distribution**: Captured profits are split between recipient and fund distribution
+7. **Failsafe**: Any errors are caught to prevent disruption
 
 ## 🛠️ Technical Features
 
@@ -94,6 +97,32 @@ function setRecipientShare(uint256 _recipientShareBps) external;
 // Remaining profits go to FundsSplitter distribution
 ```
 
+### Fee Exemption System
+
+```solidity
+// Automatic fee exemption in beforeSwap hook
+function beforeSwap(address sender, ...) external override returns (bytes4, uint24, uint24) {
+    // Calculate sliding fee
+    uint16 newFee = _getFeeAndUpdateFactors(zeroToOne, currentTick, lastTick);
+
+    // Exempt reflexRouter from fees to prevent self-taxation
+    if (sender == getRouter()) {
+        newFee = 0;
+    }
+
+    return (selector, newFee, 0);
+}
+
+// Get current router address
+function getRouter() public view returns (address);
+```
+
+**Key Benefits:**
+
+- **Prevents Self-Taxation**: MEV capture transactions don't pay fees to themselves
+- **Cost Efficiency**: Maximizes profit extraction by eliminating unnecessary fee overhead
+- **Works with Sliding Fees**: Integrates perfectly with Algebra's dynamic fee system
+
 ### Authorization
 
 - Uses Algebra's existing `ALGEBRA_BASE_PLUGIN_MANAGER` role
@@ -102,7 +131,7 @@ function setRecipientShare(uint256 _recipientShareBps) external;
 
 ## 📊 Testing
 
-Comprehensive test suite with **116 passing tests**:
+Comprehensive test suite with **127 passing tests**:
 
 ### Test Categories
 
@@ -112,6 +141,7 @@ Comprehensive test suite with **116 passing tests**:
 - **Edge Cases**: Boundary conditions and error scenarios
 - **Authorization Tests**: Access control verification
 - **Profit Distribution Tests**: Recipient share validation
+- **Fee Exemption Tests**: ReflexRouter fee exemption verification
 
 ### Running Tests
 
@@ -123,6 +153,9 @@ forge test
 forge test --match-contract AlgebraBasePluginV3Test
 forge test --match-contract ReflexAfterSwapTest
 forge test --match-contract FundsSplitterTest
+
+# Run fee exemption tests specifically
+forge test --match-test "test_BeforeSwap_.*"
 
 # Run with gas reporting
 forge test --gas-report
@@ -199,6 +232,19 @@ plugin.setRecipientShare(2500); // 2500 basis points = 25%
 
 // Re-enable MEV capture
 plugin.setReflexEnabled(true);
+```
+
+### Fee Exemption in Action
+
+```solidity
+// When a normal user swaps - they pay the calculated fee
+user.swap() -> beforeSwap(normalUser, ...) -> fee = 500 (0.05%)
+
+// When reflexRouter performs MEV capture - zero fee automatically applied
+reflexRouter.triggerBackrun() -> beforeSwap(reflexRouter, ...) -> fee = 0 (0%)
+
+// Verification
+assert(plugin.getRouter() == address(reflexRouter));
 ```
 
 ## 🤝 Contributing

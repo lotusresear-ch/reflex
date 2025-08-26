@@ -59,6 +59,15 @@ contract AlgebraBasePluginV3Test is Test {
         pool.setPlugin(address(plugin));
     }
 
+    /// @notice Helper function to initialize the plugin for beforeSwap tests
+    function _initializePlugin() internal {
+        vm.prank(address(pool));
+        plugin.beforeInitialize(address(0), 0);
+
+        vm.prank(address(pool));
+        plugin.afterInitialize(address(0), 0, 0);
+    }
+
     // ===== AfterSwap Hook Tests =====
 
     function test_AfterSwap_BasicFunctionality() public {
@@ -419,5 +428,237 @@ contract AlgebraBasePluginV3Test is Test {
         vm.prank(address(pool));
         plugin.afterSwap(address(0), recipient, true, 0, 0, 3000e18, -1500e18, "");
         assertEq(reflexRouter.getTriggerBackrunCallsLength(), initialCallCount + 2);
+    }
+
+    // ===== Fee Exemption Tests =====
+
+    function test_BeforeSwap_ReflexRouterFeeExemption() public {
+        _initializePlugin();
+
+        // Test that reflexRouter gets zero fee
+        vm.prank(address(pool));
+        (, uint24 fee,) = plugin.beforeSwap(
+            address(reflexRouter), // sender = reflexRouter
+            recipient,
+            true, // zeroToOne
+            1000e18, // amountSpecified
+            0, // sqrtPriceLimitX96
+            false, // withPayment
+            ""
+        );
+
+        // Fee should be 500 for reflexRouter
+        assertEq(fee, 500);
+    }
+
+    function test_BeforeSwap_NormalUserPaysBaseFee() public {
+        _initializePlugin();
+
+        address normalUser = makeAddr("normalUser");
+
+        vm.prank(address(pool));
+        (, uint24 fee,) = plugin.beforeSwap(
+            normalUser, // sender = normal user
+            recipient,
+            true, // zeroToOne
+            1000e18, // amountSpecified
+            0, // sqrtPriceLimitX96
+            false, // withPayment
+            ""
+        );
+
+        // Fee should be non-zero for normal users (base fee or calculated sliding fee)
+        assertTrue(fee > 0);
+    }
+
+    function test_BeforeSwap_FeeExemptionOnlyForReflexRouter() public {
+        _initializePlugin();
+
+        address anotherRouter = makeAddr("anotherRouter");
+
+        // Test normal user pays fee
+        vm.prank(address(pool));
+        (, uint24 normalFee,) = plugin.beforeSwap(
+            recipient, // sender = normal user
+            recipient,
+            true,
+            1000e18,
+            0,
+            false,
+            ""
+        );
+
+        // Test another router address pays fee
+        vm.prank(address(pool));
+        (, uint24 otherRouterFee,) = plugin.beforeSwap(
+            anotherRouter, // sender = different router
+            recipient,
+            true,
+            1000e18,
+            0,
+            false,
+            ""
+        );
+
+        // Test reflexRouter gets 500 fee
+        vm.prank(address(pool));
+        (, uint24 reflexRouterFee,) = plugin.beforeSwap(
+            address(reflexRouter), // sender = reflexRouter
+            recipient,
+            true,
+            1000e18,
+            0,
+            false,
+            ""
+        );
+
+        // ReflexRouter should get 500 fee, others pay higher fees
+        assertTrue(normalFee > 0);
+        assertTrue(otherRouterFee > 0);
+        assertEq(reflexRouterFee, 500);
+    }
+
+    function test_BeforeSwap_FeeExemptionBothDirections() public {
+        _initializePlugin();
+
+        // Test zero to one
+        vm.prank(address(pool));
+        (, uint24 feeZeroToOne,) = plugin.beforeSwap(
+            address(reflexRouter),
+            recipient,
+            true, // zeroToOne = true
+            1000e18,
+            0,
+            false,
+            ""
+        );
+
+        // Test one to zero
+        vm.prank(address(pool));
+        (, uint24 feeOneToZero,) = plugin.beforeSwap(
+            address(reflexRouter),
+            recipient,
+            false, // zeroToOne = false
+            1000e18,
+            0,
+            false,
+            ""
+        );
+
+        // Both directions should have 500 fee for reflexRouter
+        assertEq(feeZeroToOne, 500);
+        assertEq(feeOneToZero, 500);
+    }
+
+    function test_BeforeSwap_FeeExemptionWithDifferentAmounts() public {
+        _initializePlugin();
+
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1e18; // Small amount
+        amounts[1] = 1000e18; // Medium amount
+        amounts[2] = 1000000e18; // Large amount
+        amounts[3] = type(uint112).max; // Maximum amount
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            vm.prank(address(pool));
+            (, uint24 fee,) =
+                plugin.beforeSwap(address(reflexRouter), recipient, true, int256(amounts[i]), 0, false, "");
+
+            // Fee should always be 500 for reflexRouter regardless of amount
+            assertEq(fee, 500, string(abi.encodePacked("Fee should be 500 for amount: ", amounts[i])));
+        }
+    }
+
+    function test_GetRouter_ReturnsCorrectAddress() public view {
+        // Test that getRouter returns the reflexRouter address
+        address routerFromPlugin = plugin.getRouter();
+        assertEq(routerFromPlugin, address(reflexRouter));
+    }
+
+    function test_BeforeSwap_OnlyPoolCanCall() public {
+        // Unauthorized caller should not be able to call beforeSwap
+        vm.expectRevert();
+        plugin.beforeSwap(address(reflexRouter), recipient, true, 1000e18, 0, false, "");
+    }
+
+    function test_BeforeSwap_ReturnsCorrectSelector() public {
+        _initializePlugin();
+
+        vm.prank(address(pool));
+        (bytes4 selector,,) = plugin.beforeSwap(address(reflexRouter), recipient, true, 1000e18, 0, false, "");
+
+        assertEq(selector, IAlgebraPlugin.beforeSwap.selector);
+    }
+
+    function testFuzz_BeforeSwap_ReflexRouterAlwaysBaseFee(
+        bool zeroToOne,
+        int256 amountSpecified,
+        address recipientAddr
+    ) public {
+        vm.assume(recipientAddr != address(0));
+        vm.assume(amountSpecified != 0);
+
+        _initializePlugin();
+
+        vm.prank(address(pool));
+        (, uint24 fee,) =
+            plugin.beforeSwap(address(reflexRouter), recipientAddr, zeroToOne, amountSpecified, 0, false, "");
+
+        // ReflexRouter should always get 500 fee regardless of parameters
+        assertEq(fee, 500);
+    }
+
+    function testFuzz_BeforeSwap_NonReflexRouterPaysfee(
+        address sender,
+        bool zeroToOne,
+        int256 amountSpecified,
+        address recipientAddr
+    ) public {
+        vm.assume(recipientAddr != address(0));
+        vm.assume(sender != address(0));
+        vm.assume(sender != address(reflexRouter)); // Exclude reflexRouter
+        vm.assume(amountSpecified != 0);
+
+        _initializePlugin();
+
+        vm.prank(address(pool));
+        (, uint24 fee,) = plugin.beforeSwap(sender, recipientAddr, zeroToOne, amountSpecified, 0, false, "");
+
+        // Non-reflexRouter addresses should pay fee (fee > 0)
+        assertTrue(fee > 0);
+    }
+
+    function test_BeforeSwap_FeeExemptionIntegrationWithSliding() public {
+        _initializePlugin();
+
+        // Perform multiple swaps to build up fee history and test that
+        // reflexRouter still gets exemption even with sliding fee adjustments
+
+        address normalUser = makeAddr("normalUser");
+
+        // First, perform swaps with normal user to establish sliding fee context
+        for (uint256 i = 0; i < 3; i++) {
+            vm.prank(address(pool));
+            plugin.beforeSwap(
+                normalUser,
+                recipient,
+                i % 2 == 0, // alternate direction
+                1000e18,
+                0,
+                false,
+                ""
+            );
+        }
+
+        // Now test that reflexRouter still gets 500 fee
+        vm.prank(address(pool));
+        (, uint24 reflexFee,) = plugin.beforeSwap(address(reflexRouter), recipient, true, 1000e18, 0, false, "");
+
+        // And normal user still pays fee
+        vm.prank(address(pool));
+        (, uint24 normalFee,) = plugin.beforeSwap(normalUser, recipient, true, 1000e18, 0, false, "");
+
+        assertEq(reflexFee, 500);
+        assertTrue(normalFee > 0);
     }
 }

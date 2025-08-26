@@ -9,7 +9,7 @@ import "../../utils/TestUtils.sol";
 contract TestableSplitter is FundsSplitter {
     address private _admin;
 
-    constructor(address admin_, address[] memory recipients_, uint256[] memory sharesBps_) FundsSplitter() {
+    constructor(address admin_, address[] memory recipients_, uint256[] memory sharesBps_) {
         _admin = admin_;
         _setShares(recipients_, sharesBps_);
     }

@@ -79,7 +79,7 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         return IAlgebraPlugin.afterModifyPosition.selector;
     }
 
-    function beforeSwap(address, address, bool zeroToOne, int256, uint160, bool, bytes calldata)
+    function beforeSwap(address sender, address, bool zeroToOne, int256, uint160, bool, bytes calldata)
         external
         override
         onlyPool
@@ -88,7 +88,9 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         (, int24 currentTick,,) = _getPoolState();
         int24 lastTick = _getLastTick();
         uint16 newFee = _getFeeAndUpdateFactors(zeroToOne, currentTick, lastTick);
-
+        if (sender == getRouter()) {
+            newFee = 500;
+        }
         _writeTimepoint();
         return (IAlgebraPlugin.beforeSwap.selector, newFee, 0);
     }

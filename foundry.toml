@@ -11,7 +11,8 @@ remappings = [
     "@cryptoalgebra/periphery/=lib/Algebra/src/periphery/contracts/",
     "@cryptoalgebra/plugin/=lib/Algebra/src/plugin/contracts/",
     "@cryptoalgebra/tokenomics/=lib/Algebra/src/tokenomics/contracts/",
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/"
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
