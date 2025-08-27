@@ -19,7 +19,6 @@ contract SharedMockQuoter is IReflexQuoter {
     }
 
     mapping(bytes32 => RouteConfig) public routes;
-    uint256 public callCount;
     bool public shouldRevert;
 
     function setQuote(
@@ -111,19 +110,6 @@ contract SharedMockQuoter is IReflexQuoter {
             route.amounts,
             route.initialHopIndex
         );
-    }
-
-    // Separate function to track calls for testing (non-view)
-    function trackCall() external {
-        callCount++;
-    }
-
-    function getCallCount() external view returns (uint256) {
-        return callCount;
-    }
-
-    function resetCallCount() external {
-        callCount = 0;
     }
 }
 

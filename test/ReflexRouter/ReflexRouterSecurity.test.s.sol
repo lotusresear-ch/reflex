@@ -150,7 +150,7 @@ contract ReflexRouterSecurityTest is Test {
     MaliciousReentrancyContract public reentrancyAttacker;
     MaliciousPool public maliciousPool;
 
-    address public owner = address(0x1);
+    address public owner = address(this); // Test contract is the owner due to tx.origin in constructor
     address public alice = address(0xA);
     address public attacker = address(0xBAD);
 
@@ -164,10 +164,6 @@ contract ReflexRouterSecurityTest is Test {
         maliciousQuoter = new MaliciousQuoter();
         reentrancyAttacker = new MaliciousReentrancyContract(payable(address(reflexRouter)));
         maliciousPool = new MaliciousPool();
-
-        // Set up quoter with proper owner
-        vm.prank(reflexRouter.owner());
-        reflexRouter.setReflexQuoter(address(maliciousQuoter));
 
         // Fund the router
         token0.mint(address(reflexRouter), 10000 * 10 ** 18);
@@ -220,10 +216,15 @@ contract ReflexRouterSecurityTest is Test {
         vm.expectRevert();
         reflexRouter.withdrawToken(address(token0), amount, attacker);
 
+        // Record balance before withdrawal
+        uint256 balanceBefore = token0.balanceOf(address(this));
+
         // Owner should succeed
         vm.prank(reflexRouter.owner());
-        reflexRouter.withdrawToken(address(token0), amount, owner);
-        assertEq(token0.balanceOf(owner), amount);
+        reflexRouter.withdrawToken(address(token0), amount, address(this));
+        
+        // Check balance increased by the withdrawn amount
+        assertEq(token0.balanceOf(address(this)), balanceBefore + amount);
     }
 
     function test_onlyAdmin_withdrawEth() public {
@@ -305,6 +306,10 @@ contract ReflexRouterSecurityTest is Test {
     // =============================================================================
 
     function test_extreme_values_no_overflow() public {
+        // Set up minimal quoter to avoid revert
+        vm.prank(reflexRouter.owner());
+        reflexRouter.setReflexQuoter(address(maliciousQuoter));
+        
         bytes32 triggerPoolId = bytes32(uint256(uint160(address(token0))));
 
         // Test with maximum possible values
@@ -317,6 +322,10 @@ contract ReflexRouterSecurityTest is Test {
     }
 
     function test_zero_values_handling() public {
+        // Set up minimal quoter to avoid revert
+        vm.prank(reflexRouter.owner());
+        reflexRouter.setReflexQuoter(address(maliciousQuoter));
+        
         bytes32 triggerPoolId = bytes32(0);
 
         (uint256 profit, address profitToken) = reflexRouter.triggerBackrun(triggerPoolId, 0, true, address(0));
@@ -355,6 +364,10 @@ contract ReflexRouterSecurityTest is Test {
     // =============================================================================
 
     function test_transaction_order_independence() public {
+        // Set up minimal quoter to avoid revert
+        vm.prank(reflexRouter.owner());
+        reflexRouter.setReflexQuoter(address(maliciousQuoter));
+        
         // Test that the same parameters produce the same results regardless of order
         bytes32 triggerPoolId = bytes32(uint256(uint160(address(token0))));
 
@@ -410,6 +423,10 @@ contract ReflexRouterSecurityTest is Test {
     // =============================================================================
 
     function test_slippage_protection() public {
+        // Set up minimal quoter to avoid revert
+        vm.prank(reflexRouter.owner());
+        reflexRouter.setReflexQuoter(address(maliciousQuoter));
+        
         // While the router doesn't have explicit slippage protection,
         // it should handle scenarios where expected profits don't materialize
 
@@ -429,6 +446,10 @@ contract ReflexRouterSecurityTest is Test {
     // =============================================================================
 
     function test_invalid_pool_addresses() public {
+        // Set up minimal quoter to avoid revert
+        vm.prank(reflexRouter.owner());
+        reflexRouter.setReflexQuoter(address(maliciousQuoter));
+        
         // Test with invalid pool addresses
         bytes32 invalidPoolId = bytes32(uint256(uint160(address(0xdead))));
 
@@ -485,7 +506,9 @@ contract ReflexRouterSecurityTest is Test {
         uint256 randomAmount,
         address randomRecipient
     ) public {
-        vm.assume(randomCaller != owner);
+        address routerOwner = reflexRouter.owner();
+        vm.assume(randomCaller != routerOwner);
+        vm.assume(randomCaller != address(this));
         vm.assume(randomCaller != address(0));
         vm.assume(randomToken != address(0));
         vm.assume(randomRecipient != address(0));
@@ -510,6 +533,10 @@ contract ReflexRouterSecurityTest is Test {
     {
         vm.assume(recipient != address(0));
         vm.assume(amount > 0);
+
+        // Set up minimal quoter to avoid revert
+        vm.prank(reflexRouter.owner());
+        reflexRouter.setReflexQuoter(address(maliciousQuoter));
 
         // Same inputs should produce same outputs
         (uint256 profit1, address profitToken1) = reflexRouter.triggerBackrun(poolId, amount, tokenIn, recipient);

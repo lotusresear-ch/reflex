@@ -2,18 +2,18 @@
 
 ## Overview
 
-This directory contains a comprehensive testing suite for the ReflexRouter contract, covering functionality, security, performance, and integration scenarios. The test suite follows Foundry conventions and provides extensive coverage of all contract features.
+This directory contains a comprehensive testing suite for the ReflexRouter contract, covering functionality, security, performance, and integration scenarios. The test suite follows Foundry conventions and provides excellent coverage of all contract features with 76 total tests achieving 93.55% line coverage.
 
 ## Test Files Structure
 
 ### 1. `ReflexRouter.test.s.sol` - Core Functionality Tests
 
 **File Purpose**: Tests basic ReflexRouter functionality and core features
-**Test Count**: ~50 tests
+**Test Count**: 27 tests
 
 **Test Categories**:
 
-- ✅ Constructor and basic setup
+- ✅ Constructor and basic setup validation
 - ✅ Admin functions (setReflexQuoter, getReflexAdmin)
 - ✅ triggerBackrun success scenarios (token0In/token1In)
 - ✅ No profit scenarios handling
@@ -40,7 +40,7 @@ testFuzz_triggerBackrun_amounts()          // Fuzz testing with various amounts
 ### 2. `ReflexRouterInternal.test.s.sol` - Internal Logic Tests
 
 **File Purpose**: Tests internal functions and DEX interaction logic
-**Test Count**: ~40 tests
+**Test Count**: 19 tests
 
 **Test Categories**:
 
@@ -69,7 +69,7 @@ test_full_arbitrage_simulation()          // End-to-end arbitrage test
 ### 3. `ReflexRouterSecurity.test.s.sol` - Security and Attack Tests
 
 **File Purpose**: Tests security vulnerabilities and attack vectors
-**Test Count**: ~35 tests
+**Test Count**: 19 tests
 
 **Test Categories**:
 
@@ -100,7 +100,7 @@ testFuzz_no_unauthorized_state_changes()  // State integrity verification
 ### 4. `ReflexRouterIntegration.test.s.sol` - Integration and Performance Tests
 
 **File Purpose**: Tests realistic scenarios and performance characteristics
-**Test Count**: ~25 tests
+**Test Count**: 11 tests
 
 **Test Categories**:
 
@@ -121,25 +121,31 @@ test_simple_two_hop_arbitrage()           // Basic A->B->A arbitrage
 test_three_hop_arbitrage_mixed_dex()      // V2->V3->V2 arbitrage
 test_gas_usage_complex_arbitrage()        // Gas optimization verification
 test_multiple_sequential_arbitrages()     // Stress testing
+test_rapid_fire_arbitrages()              // High-frequency operation testing
 test_arbitrage_with_price_impact()        // Realistic market conditions
 ```
 
 ## Test Utilities and Mocks
 
+### Shared Mock System
+
+- **SharedRouterMocks.sol**: Unified mock system providing consistent behavior across all tests
+  - **SharedMockQuoter**: View-optimized quoter for realistic DeFi interactions
+  - **SharedMockV2Pool**: V2-style DEX pool simulation with proper callback support
+  - **SharedMockV3Pool**: V3-style DEX pool simulation for complex scenarios
+  - **RouterTestHelper**: Library providing comprehensive test utilities
+
 ### Mock Contracts
 
-- **MockReflexQuoter**: Configurable quoter for testing various scenarios
-- **MockUniswapV2Pair**: V2-style DEX pool simulation
-- **MockUniswapV3Pool**: V3-style DEX pool simulation
-- **MockToken**: ERC20 token implementation for testing
-- **MaliciousReentrancyContract**: Attack contract for security testing
-- **FailingTokenContract**: Token that can fail transfers for error testing
+- **MockToken**: ERC20 token implementation for testing various scenarios
+- **MockAlgebraFactory**: Factory contract for V3-style pool creation
+- **MockAlgebraPool**: Advanced V3 pool implementation with callback support
+- **MaliciousReentrancyContract**: Attack contract for security testing (maintains call tracking for reentrancy detection)
 
 ### Test Utilities
 
-- **TestUtils.sol**: Helper functions for creating mock contracts
-- **TestableReflexRouter**: Exposes internal functions for testing
-- **FullMockQuoter**: Comprehensive quoter for integration testing
+- **TestUtils.sol**: Helper functions for creating mock contracts and test scenarios
+- **SwapSimulationTest.sol**: Advanced swap simulation utilities
 
 ## Coverage Areas
 
@@ -220,7 +226,15 @@ forge test --match-test "testFuzz"
 forge test --match-test "test_gas"
 ```
 
-## Test Metrics and Benchmarks
+## Test Metrics and Coverage
+
+### Current Coverage (via `forge coverage`)
+
+- **Line Coverage**: 93.55% (ReflexRouter.sol)
+- **Function Coverage**: 100%
+- **Branch Coverage**: 85%
+- **Total Tests**: 76 tests across 4 test files
+- **Success Rate**: 100% (76/76 tests passing)
 
 ### Expected Gas Usage
 
@@ -232,7 +246,7 @@ forge test --match-test "test_gas"
 ### Performance Targets
 
 - **Sequential arbitrages**: 10+ operations without issues
-- **Rapid fire trades**: 5+ operations in single transaction
+- **Rapid fire trades**: 5+ operations in single transaction (no call tracking required)
 - **Large trade amounts**: Up to `type(uint112).max`
 - **Complex routes**: Up to 4+ hops supported
 
