@@ -222,7 +222,7 @@ contract ReflexRouterSecurityTest is Test {
         // Owner should succeed
         vm.prank(reflexRouter.owner());
         reflexRouter.withdrawToken(address(token0), amount, address(this));
-        
+
         // Check balance increased by the withdrawn amount
         assertEq(token0.balanceOf(address(this)), balanceBefore + amount);
     }
@@ -309,7 +309,7 @@ contract ReflexRouterSecurityTest is Test {
         // Set up minimal quoter to avoid revert
         vm.prank(reflexRouter.owner());
         reflexRouter.setReflexQuoter(address(maliciousQuoter));
-        
+
         bytes32 triggerPoolId = bytes32(uint256(uint160(address(token0))));
 
         // Test with maximum possible values
@@ -325,7 +325,7 @@ contract ReflexRouterSecurityTest is Test {
         // Set up minimal quoter to avoid revert
         vm.prank(reflexRouter.owner());
         reflexRouter.setReflexQuoter(address(maliciousQuoter));
-        
+
         bytes32 triggerPoolId = bytes32(0);
 
         (uint256 profit, address profitToken) = reflexRouter.triggerBackrun(triggerPoolId, 0, true, address(0));
@@ -367,7 +367,7 @@ contract ReflexRouterSecurityTest is Test {
         // Set up minimal quoter to avoid revert
         vm.prank(reflexRouter.owner());
         reflexRouter.setReflexQuoter(address(maliciousQuoter));
-        
+
         // Test that the same parameters produce the same results regardless of order
         bytes32 triggerPoolId = bytes32(uint256(uint160(address(token0))));
 
@@ -426,7 +426,7 @@ contract ReflexRouterSecurityTest is Test {
         // Set up minimal quoter to avoid revert
         vm.prank(reflexRouter.owner());
         reflexRouter.setReflexQuoter(address(maliciousQuoter));
-        
+
         // While the router doesn't have explicit slippage protection,
         // it should handle scenarios where expected profits don't materialize
 
@@ -449,7 +449,7 @@ contract ReflexRouterSecurityTest is Test {
         // Set up minimal quoter to avoid revert
         vm.prank(reflexRouter.owner());
         reflexRouter.setReflexQuoter(address(maliciousQuoter));
-        
+
         // Test with invalid pool addresses
         bytes32 invalidPoolId = bytes32(uint256(uint160(address(0xdead))));
 
