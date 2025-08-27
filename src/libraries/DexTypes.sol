@@ -14,9 +14,6 @@ library DexTypes {
     /// @notice UniswapV2 without callback support (standard swap only)
     uint8 public constant UNISWAP_V2_WITHOUT_CALLBACK = 1;
 
-    /// @notice Curve protocol (currently not implemented)
-    uint8 public constant CURVE = 2;
-
     /// @notice UniswapV3 protocol
     uint8 public constant UNISWAP_V3 = 3;
 
@@ -67,16 +64,6 @@ library DexTypes {
     }
 
     /**
-     * @notice Checks if a DEX type is Curve protocol
-     * @dev Returns true for Curve DEX type
-     * @param dexType The DEX type identifier
-     * @return True if the DEX type is Curve (type 2)
-     */
-    function isCurve(uint8 dexType) internal pure returns (bool) {
-        return dexType == CURVE;
-    }
-
-    /**
      * @notice Gets a human-readable name for a DEX type
      * @dev Useful for debugging and logging purposes
      * @param dexType The DEX type identifier
@@ -87,8 +74,6 @@ library DexTypes {
             return "UniswapV2 (with callback)";
         } else if (dexType == UNISWAP_V2_WITHOUT_CALLBACK) {
             return "UniswapV2 (without callback)";
-        } else if (dexType == CURVE) {
-            return "Curve";
         } else if (dexType == UNISWAP_V3) {
             return "UniswapV3";
         } else if (dexType == SOLIDLY) {
