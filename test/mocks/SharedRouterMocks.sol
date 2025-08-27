@@ -75,12 +75,12 @@ contract SharedMockQuoter is IReflexQuoter {
 
     function getQuote(address pool, uint8 assetId, uint256 swapAmountIn)
         external
+        view
         override
         returns (uint256 profit, SwapDecodedData memory decoded, uint256[] memory amountsOut, uint256 initialHopIndex)
     {
         if (shouldRevert) revert("MockReflexQuoter: forced revert");
 
-        callCount++;
         bytes32 key = keccak256(abi.encodePacked(pool, assetId, swapAmountIn));
         RouteConfig memory route = routes[key];
 
@@ -113,6 +113,11 @@ contract SharedMockQuoter is IReflexQuoter {
         );
     }
 
+    // Separate function to track calls for testing (non-view)
+    function trackCall() external {
+        callCount++;
+    }
+
     function getCallCount() external view returns (uint256) {
         return callCount;
     }
@@ -131,8 +136,6 @@ contract SharedMockV2Pool {
     uint256 public reserve0;
     uint256 public reserve1;
 
-    mapping(address => bool) public authorizedCallers;
-
     constructor(address _token0, address _token1) {
         token0 = _token0;
         token1 = _token1;
@@ -140,10 +143,6 @@ contract SharedMockV2Pool {
 
     function setShouldRevert(bool _shouldRevert) external {
         shouldRevert = _shouldRevert;
-    }
-
-    function setAuthorizedCaller(address caller, bool authorized) external {
-        authorizedCallers[caller] = authorized;
     }
 
     function setReserves(uint256 _reserve0, uint256 _reserve1) external {
@@ -186,8 +185,6 @@ contract SharedMockV3Pool {
     bytes public lastCallData;
     uint256 public price = 1050000000000000000; // 1.05 default price
 
-    mapping(address => bool) public authorizedCallers;
-
     constructor(address _token0, address _token1) {
         token0 = _token0;
         token1 = _token1;
@@ -195,10 +192,6 @@ contract SharedMockV3Pool {
 
     function setShouldRevert(bool _shouldRevert) external {
         shouldRevert = _shouldRevert;
-    }
-
-    function setAuthorizedCaller(address caller, bool authorized) external {
-        authorizedCallers[caller] = authorized;
     }
 
     function setFee(uint256 _fee) external {
@@ -218,7 +211,6 @@ contract SharedMockV3Pool {
     ) external returns (int256 amount0, int256 amount1) {
         if (shouldRevert) revert("SharedMockV3Pool: forced revert");
         lastCallData = data;
-        require(authorizedCallers[msg.sender] || msg.sender == recipient, "Unauthorized");
 
         uint256 amountIn = uint256(amountSpecified);
 

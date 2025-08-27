@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/ReflexRouter.sol";
-import "../../src/interfaces/IReflexQuoter.sol";
-import "../../src/libraries/DexTypes.sol";
-import "../utils/TestUtils.sol";
-import "../mocks/MockToken.sol";
+import "../src/ReflexRouter.sol";
+import "../src/interfaces/IReflexQuoter.sol";
+import "../src/libraries/DexTypes.sol";
+import "./utils/TestUtils.sol";
+import "./mocks/MockToken.sol";
 
 // Test contract that exposes internal functions for testing
 contract TestableReflexRouter is ReflexRouter {
@@ -85,11 +85,10 @@ contract CallbackTestV2Pool {
         if (amount0Out > 0) MockToken(token0).mint(to, amount0Out);
         if (amount1Out > 0) MockToken(token1).mint(to, amount1Out);
 
-        // Call the fallback function directly by calling with the expected signature
-        // The ReflexRouter expects V2 callback to match the signature: swap(uint256,uint256,bytes)
+        // Call the callback
         if (data.length > 0) {
             (bool success,) =
-                msg.sender.call(abi.encodeWithSignature("swap(uint256,uint256,bytes)", amount0Out, amount1Out, data));
+                to.call(abi.encodeWithSignature("swap(uint256,uint256,bytes)", amount0Out, amount1Out, data));
             require(success, "Callback failed");
         }
     }
@@ -122,11 +121,10 @@ contract CallbackTestV3Pool {
             MockToken(token0).mint(recipient, uint256(-amount0));
         }
 
-        // Call the fallback function directly by calling with the expected signature
-        // The ReflexRouter expects V3 callback to match the signature: swap(int256,int256,bytes)
+        // Call the callback
         if (data.length > 0) {
             (bool success,) =
-                msg.sender.call(abi.encodeWithSignature("swap(int256,int256,bytes)", amount0, amount1, data));
+                recipient.call(abi.encodeWithSignature("swap(int256,int256,bytes)", amount0, amount1, data));
             require(success, "Callback failed");
         }
     }
@@ -146,6 +144,7 @@ contract ReflexRouterInternalTest is Test {
     address public alice = address(0xA);
 
     function setUp() public {
+        vm.prank(owner);
         testRouter = new TestableReflexRouter();
 
         // Create tokens
@@ -327,36 +326,40 @@ contract ReflexRouterInternalTest is Test {
     }
 
     function test_swapFlow_circularRoute() public {
-        // Simplified circular route test without complex callback dependencies
-        address[] memory pairs = new address[](2);
+        // Test a circular route that starts and ends with the same token
+        address[] memory pairs = new address[](3);
         pairs[0] = address(v2Pool);
         pairs[1] = address(v3Pool);
+        pairs[2] = address(v2Pool);
 
-        uint8[] memory dexTypes = new uint8[](2);
-        dexTypes[0] = DexTypes.UNISWAP_V2_WITHOUT_CALLBACK; // Simplified version
+        uint8[] memory dexTypes = new uint8[](3);
+        dexTypes[0] = DexTypes.UNISWAP_V2_WITH_CALLBACK;
         dexTypes[1] = DexTypes.UNISWAP_V3;
+        dexTypes[2] = DexTypes.UNISWAP_V2_WITH_CALLBACK;
 
-        uint8[] memory meta = new uint8[](2);
+        uint8[] memory meta = new uint8[](3);
         meta[0] = 0x80; // zeroForOne = true
         meta[1] = 0x00; // zeroForOne = false
+        meta[2] = 0x80; // zeroForOne = true
 
-        address[] memory tokens = new address[](3);
+        address[] memory tokens = new address[](4);
         tokens[0] = address(token0);
         tokens[1] = address(token1);
-        tokens[2] = address(token0); // Back to original token
+        tokens[2] = address(token0);
+        tokens[3] = address(token0);
 
-        uint256[] memory amounts = new uint256[](3);
+        uint256[] memory amounts = new uint256[](4);
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 950 * 10 ** 18;
-        amounts[2] = 1100 * 10 ** 18; // Potential profit
+        amounts[2] = 980 * 10 ** 18;
+        amounts[3] = 1100 * 10 ** 18; // Profit!
 
         uint256 initialBalance = token0.balanceOf(address(testRouter));
 
         testRouter.exposedSwapFlow(pairs, amounts, dexTypes, meta, 0, tokens);
 
-        // Should have executed the swap
-        // Note: Due to simplified mock behavior, we don't expect actual profit
-        assertTrue(token0.balanceOf(address(testRouter)) >= initialBalance - 200 * 10 ** 18);
+        // Should have made a profit
+        assertGt(token0.balanceOf(address(testRouter)), initialBalance);
     }
 
     // =============================================================================
@@ -497,10 +500,9 @@ contract ReflexRouterInternalTest is Test {
         // Start the arbitrage
         testRouter.exposedTriggerSwapRoute(decoded, amounts, 0);
 
-        // Verify the swap executed (due to the mock pool behavior giving 95% returns)
+        // Verify profit was made
         uint256 finalBalance = token0.balanceOf(address(testRouter));
-        // The mock pools give 95% returns, so we expect some loss, not profit
-        assertTrue(finalBalance >= initialBalance - 200 * 10 ** 18); // Allow for reasonable loss due to mock behavior
+        assertGe(finalBalance, initialBalance); // Should have at least the same, ideally more
     }
 
     // =============================================================================
@@ -534,28 +536,32 @@ contract ReflexRouterInternalTest is Test {
     }
 
     function test_gas_swapFlow_multipleHops() public {
-        // Simplified multi-hop test that doesn't rely on complex callback interactions
-        address[] memory pairs = new address[](2);
+        address[] memory pairs = new address[](3);
         pairs[0] = address(v2Pool);
         pairs[1] = address(v3Pool);
+        pairs[2] = address(v2Pool);
 
-        uint8[] memory dexTypes = new uint8[](2);
-        dexTypes[0] = DexTypes.UNISWAP_V2_WITHOUT_CALLBACK; // Use non-callback version for simplicity
+        uint8[] memory dexTypes = new uint8[](3);
+        dexTypes[0] = DexTypes.UNISWAP_V2_WITH_CALLBACK;
         dexTypes[1] = DexTypes.UNISWAP_V3;
+        dexTypes[2] = DexTypes.UNISWAP_V2_WITH_CALLBACK;
 
-        uint8[] memory meta = new uint8[](2);
+        uint8[] memory meta = new uint8[](3);
         meta[0] = 0x80;
         meta[1] = 0x00;
+        meta[2] = 0x80;
 
-        address[] memory tokens = new address[](3);
+        address[] memory tokens = new address[](4);
         tokens[0] = address(token0);
         tokens[1] = address(token1);
         tokens[2] = address(token0);
+        tokens[3] = address(token0);
 
-        uint256[] memory amounts = new uint256[](3);
+        uint256[] memory amounts = new uint256[](4);
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 950 * 10 ** 18;
-        amounts[2] = 1050 * 10 ** 18;
+        amounts[2] = 980 * 10 ** 18;
+        amounts[3] = 1050 * 10 ** 18;
 
         uint256 gasBefore = gasleft();
         testRouter.exposedSwapFlow(pairs, amounts, dexTypes, meta, 0, tokens);

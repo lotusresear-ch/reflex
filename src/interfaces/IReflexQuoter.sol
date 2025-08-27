@@ -13,5 +13,6 @@ interface IReflexQuoter {
 
     function getQuote(address pool, uint8 assetId, uint256 swapAmountIn)
         external
+        view
         returns (uint256 profit, SwapDecodedData memory decoded, uint256[] memory amountsOut, uint256 initialHopIndex);
 }

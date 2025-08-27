@@ -7,10 +7,12 @@ This directory contains a comprehensive testing suite for the ReflexRouter contr
 ## Test Files Structure
 
 ### 1. `ReflexRouter.test.s.sol` - Core Functionality Tests
+
 **File Purpose**: Tests basic ReflexRouter functionality and core features
 **Test Count**: ~50 tests
 
 **Test Categories**:
+
 - ✅ Constructor and basic setup
 - ✅ Admin functions (setReflexQuoter, getReflexAdmin)
 - ✅ triggerBackrun success scenarios (token0In/token1In)
@@ -24,6 +26,7 @@ This directory contains a comprehensive testing suite for the ReflexRouter contr
 - ✅ Fuzz testing for core parameters
 
 **Key Test Scenarios**:
+
 ```solidity
 test_triggerBackrun_success_token0In()     // Basic profitable arbitrage
 test_triggerBackrun_success_token1In()     // Reverse direction arbitrage
@@ -35,10 +38,12 @@ testFuzz_triggerBackrun_amounts()          // Fuzz testing with various amounts
 ```
 
 ### 2. `ReflexRouterInternal.test.s.sol` - Internal Logic Tests
+
 **File Purpose**: Tests internal functions and DEX interaction logic
 **Test Count**: ~40 tests
 
 **Test Categories**:
+
 - ✅ DexTypes library functionality
 - ✅ Bit manipulation functions (decodeIsZeroForOne)
 - ✅ Bytes to address conversion
@@ -51,6 +56,7 @@ testFuzz_triggerBackrun_amounts()          // Fuzz testing with various amounts
 - ✅ Complex arbitrage route simulation
 
 **Key Test Scenarios**:
+
 ```solidity
 test_dexTypes_detection()                  // DEX type classification
 test_decodeIsZeroForOne_allValues()        // Bit manipulation verification
@@ -61,10 +67,12 @@ test_full_arbitrage_simulation()          // End-to-end arbitrage test
 ```
 
 ### 3. `ReflexRouterSecurity.test.s.sol` - Security and Attack Tests
+
 **File Purpose**: Tests security vulnerabilities and attack vectors
 **Test Count**: ~35 tests
 
 **Test Categories**:
+
 - ✅ Reentrancy attack protection
 - ✅ Access control bypassing attempts
 - ✅ Malformed data handling
@@ -79,6 +87,7 @@ test_full_arbitrage_simulation()          // End-to-end arbitrage test
 - ✅ Fuzz testing for security invariants
 
 **Key Test Scenarios**:
+
 ```solidity
 test_reentrancy_protection()              // Reentrancy attack simulation
 test_malformed_quoter_data()              // Malicious quoter data handling
@@ -89,10 +98,12 @@ testFuzz_no_unauthorized_state_changes()  // State integrity verification
 ```
 
 ### 4. `ReflexRouterIntegration.test.s.sol` - Integration and Performance Tests
+
 **File Purpose**: Tests realistic scenarios and performance characteristics
 **Test Count**: ~25 tests
 
 **Test Categories**:
+
 - ✅ Multi-DEX arbitrage scenarios
 - ✅ Real-world market conditions simulation
 - ✅ Gas usage optimization verification
@@ -104,6 +115,7 @@ testFuzz_no_unauthorized_state_changes()  // State integrity verification
 - ✅ Integration with multiple token pairs
 
 **Key Test Scenarios**:
+
 ```solidity
 test_simple_two_hop_arbitrage()           // Basic A->B->A arbitrage
 test_three_hop_arbitrage_mixed_dex()      // V2->V3->V2 arbitrage
@@ -115,6 +127,7 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 ## Test Utilities and Mocks
 
 ### Mock Contracts
+
 - **MockReflexQuoter**: Configurable quoter for testing various scenarios
 - **MockUniswapV2Pair**: V2-style DEX pool simulation
 - **MockUniswapV3Pool**: V3-style DEX pool simulation
@@ -123,6 +136,7 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 - **FailingTokenContract**: Token that can fail transfers for error testing
 
 ### Test Utilities
+
 - **TestUtils.sol**: Helper functions for creating mock contracts
 - **TestableReflexRouter**: Exposes internal functions for testing
 - **FullMockQuoter**: Comprehensive quoter for integration testing
@@ -130,6 +144,7 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 ## Coverage Areas
 
 ### Functional Coverage
+
 - ✅ All public functions
 - ✅ All admin functions
 - ✅ All callback mechanisms
@@ -137,6 +152,7 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 - ✅ All error paths
 
 ### Security Coverage
+
 - ✅ Access control
 - ✅ Reentrancy protection
 - ✅ Input validation
@@ -144,6 +160,7 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 - ✅ Attack vector resistance
 
 ### Edge Case Coverage
+
 - ✅ Zero values
 - ✅ Maximum values
 - ✅ Invalid inputs
@@ -151,6 +168,7 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 - ✅ Gas limit scenarios
 
 ### Integration Coverage
+
 - ✅ Multi-hop arbitrage
 - ✅ Mixed DEX types
 - ✅ Real market conditions
@@ -160,11 +178,13 @@ test_arbitrage_with_price_impact()        // Realistic market conditions
 ## Running the Tests
 
 ### Run All Tests
+
 ```bash
 forge test
 ```
 
 ### Run Specific Test File
+
 ```bash
 forge test --match-path test/ReflexRouter.test.s.sol
 forge test --match-path test/ReflexRouterInternal.test.s.sol
@@ -173,16 +193,19 @@ forge test --match-path test/ReflexRouterIntegration.test.s.sol
 ```
 
 ### Run Tests with Gas Reporting
+
 ```bash
 forge test --gas-report
 ```
 
 ### Run Tests with Coverage
+
 ```bash
 forge coverage
 ```
 
 ### Run Specific Test Categories
+
 ```bash
 # Basic functionality
 forge test --match-test "test_triggerBackrun"
@@ -200,12 +223,14 @@ forge test --match-test "test_gas"
 ## Test Metrics and Benchmarks
 
 ### Expected Gas Usage
+
 - **Simple 2-hop arbitrage**: < 500,000 gas
 - **Complex 4-hop arbitrage**: < 800,000 gas
 - **Admin functions**: < 50,000 gas
 - **Failed arbitrage**: < 100,000 gas
 
 ### Performance Targets
+
 - **Sequential arbitrages**: 10+ operations without issues
 - **Rapid fire trades**: 5+ operations in single transaction
 - **Large trade amounts**: Up to `type(uint112).max`
@@ -223,6 +248,7 @@ forge test --match-test "test_gas"
 ## Future Test Enhancements
 
 ### Potential Additions
+
 - [ ] Formal verification integration
 - [ ] Property-based testing with more invariants
 - [ ] Integration with live testnet data
@@ -230,6 +256,7 @@ forge test --match-test "test_gas"
 - [ ] More sophisticated MEV attack simulations
 
 ### Continuous Integration
+
 - [ ] Automated test runs on pull requests
 - [ ] Coverage reporting integration
 - [ ] Gas regression detection
@@ -250,12 +277,14 @@ When adding new tests:
 ## Test Data and Scenarios
 
 ### Realistic Trading Scenarios
+
 - Small trades: 100-1,000 tokens
-- Medium trades: 1,000-10,000 tokens  
+- Medium trades: 1,000-10,000 tokens
 - Large trades: 10,000-100,000 tokens
 - Whale trades: 100,000+ tokens
 
 ### Market Conditions Simulated
+
 - Normal market (low volatility)
 - High volatility periods
 - Flash crash scenarios
@@ -263,6 +292,7 @@ When adding new tests:
 - Sandwich attack environments
 
 ### DEX Configurations Tested
+
 - UniswapV2 forks with callbacks
 - UniswapV2 forks without callbacks
 - UniswapV3 style pools

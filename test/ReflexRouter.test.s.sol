@@ -2,19 +2,173 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/ReflexRouter.sol";
-import "../../src/interfaces/IReflexRouter.sol";
-import "../../src/interfaces/IReflexQuoter.sol";
-import "../../src/libraries/DexTypes.sol";
-import "../utils/TestUtils.sol";
-import "../mocks/MockToken.sol";
-import "../mocks/MockReflexRouter.sol";
-import "../mocks/SharedRouterMocks.sol";
+import "../src/ReflexRouter.sol";
+import "../src/interfaces/IReflexRouter.sol";
+import "../src/interfaces/IReflexQuoter.sol";
+import "../src/libraries/DexTypes.sol";
+import "./utils/TestUtils.sol";
+import "./mocks/MockToken.sol";
+import "./mocks/MockReflexRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Mock ReflexQuoter for testing
-contract MockReflexQuoter is SharedMockQuoter {
-// Inherit all functionality from SharedMockQuoter
+contract MockReflexQuoter is IReflexQuoter {
+    struct QuoteConfig {
+        uint256 profit;
+        SwapDecodedData decoded;
+        uint256[] amountsOut;
+        uint256 initialHopIndex;
+        bool shouldReturn;
+    }
+
+    mapping(bytes32 => QuoteConfig) public quotes;
+    bool public shouldRevert;
+
+    function setQuote(
+        address pool,
+        uint8 assetId,
+        uint256 swapAmountIn,
+        uint256 profit,
+        SwapDecodedData memory decoded,
+        uint256[] memory amountsOut,
+        uint256 initialHopIndex
+    ) external {
+        bytes32 key = keccak256(abi.encodePacked(pool, assetId, swapAmountIn));
+        quotes[key] = QuoteConfig({
+            profit: profit,
+            decoded: decoded,
+            amountsOut: amountsOut,
+            initialHopIndex: initialHopIndex,
+            shouldReturn: true
+        });
+    }
+
+    function setShouldRevert(bool _shouldRevert) external {
+        shouldRevert = _shouldRevert;
+    }
+
+    function getQuote(address pool, uint8 assetId, uint256 swapAmountIn)
+        external
+        view
+        override
+        returns (uint256 profit, SwapDecodedData memory decoded, uint256[] memory amountsOut, uint256 initialHopIndex)
+    {
+        if (shouldRevert) revert("MockReflexQuoter: forced revert");
+
+        bytes32 key = keccak256(abi.encodePacked(pool, assetId, swapAmountIn));
+        QuoteConfig memory config = quotes[key];
+
+        if (!config.shouldReturn) {
+            // Return empty data if no quote configured
+            address[] memory emptyPools = new address[](0);
+            uint8[] memory emptyTypes = new uint8[](0);
+            uint8[] memory emptyMeta = new uint8[](0);
+            address[] memory emptyTokens = new address[](0);
+            uint256[] memory emptyAmounts = new uint256[](0);
+
+            return (
+                0,
+                SwapDecodedData({
+                    pools: emptyPools,
+                    dexType: emptyTypes,
+                    dexMeta: emptyMeta,
+                    amount: 0,
+                    tokens: emptyTokens
+                }),
+                emptyAmounts,
+                0
+            );
+        }
+
+        return (config.profit, config.decoded, config.amountsOut, config.initialHopIndex);
+    }
+}
+
+// Mock UniswapV2 Pair for testing
+contract MockUniswapV2Pair {
+    address public token0;
+    address public token1;
+    bool public shouldRevert;
+    bytes public lastCallData;
+
+    constructor(address _token0, address _token1) {
+        token0 = _token0;
+        token1 = _token1;
+    }
+
+    function setShouldRevert(bool _shouldRevert) external {
+        shouldRevert = _shouldRevert;
+    }
+
+    function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external {
+        if (shouldRevert) revert("MockUniswapV2Pair: forced revert");
+        lastCallData = data;
+
+        // Transfer tokens if requested
+        if (amount0Out > 0) {
+            MockToken(token0).mint(to, amount0Out);
+        }
+        if (amount1Out > 0) {
+            MockToken(token1).mint(to, amount1Out);
+        }
+
+        // Call back if data provided
+        if (data.length > 0) {
+            (bool success,) =
+                to.call(abi.encodeWithSignature("swap(uint256,uint256,bytes)", amount0Out, amount1Out, data));
+            require(success, "Callback failed");
+        }
+    }
+
+    function swap(uint256 amount0Out, uint256 amount1Out, address to) external {
+        this.swap(amount0Out, amount1Out, to, "");
+    }
+}
+
+// Mock UniswapV3 Pool for testing
+contract MockUniswapV3Pool {
+    address public token0;
+    address public token1;
+    bool public shouldRevert;
+    bytes public lastCallData;
+
+    constructor(address _token0, address _token1) {
+        token0 = _token0;
+        token1 = _token1;
+    }
+
+    function setShouldRevert(bool _shouldRevert) external {
+        shouldRevert = _shouldRevert;
+    }
+
+    function swap(
+        address recipient,
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        bytes calldata data
+    ) external returns (int256 amount0, int256 amount1) {
+        if (shouldRevert) revert("MockUniswapV3Pool: forced revert");
+        lastCallData = data;
+
+        // Calculate output amounts (simplified)
+        if (zeroForOne) {
+            amount0 = amountSpecified; // positive (exact input)
+            amount1 = -int256(uint256(amountSpecified) * 110 / 100); // negative (output) - more profitable for token1 output
+            MockToken(token1).mint(recipient, uint256(-amount1));
+        } else {
+            amount1 = amountSpecified; // positive (exact input)
+            amount0 = -int256(uint256(amountSpecified) * 110 / 100); // negative (output) - more profitable for arbitrage
+            MockToken(token0).mint(recipient, uint256(-amount0));
+        }
+
+        // Call back if data provided
+        if (data.length > 0) {
+            (bool success,) =
+                recipient.call(abi.encodeWithSignature("swap(int256,int256,bytes)", amount0, amount1, data));
+            require(success, "Callback failed");
+        }
+    }
 }
 
 contract ReflexRouterTest is Test {
@@ -25,8 +179,8 @@ contract ReflexRouterTest is Test {
     MockToken public token0;
     MockToken public token1;
     MockToken public token2;
-    SharedMockV2Pool public mockV2Pair;
-    SharedMockV3Pool public mockV3Pool;
+    MockUniswapV2Pair public mockV2Pair;
+    MockUniswapV3Pool public mockV3Pool;
 
     address public owner = address(0x1);
     address public alice = address(0xA);
@@ -53,8 +207,8 @@ contract ReflexRouterTest is Test {
         token2 = new MockToken("Token2", "TK2", 1000000 * 10 ** 18);
 
         // Create mock DEX pools
-        mockV2Pair = new SharedMockV2Pool(address(token0), address(token1));
-        mockV3Pool = new SharedMockV3Pool(address(token0), address(token1));
+        mockV2Pair = new MockUniswapV2Pair(address(token0), address(token1));
+        mockV3Pool = new MockUniswapV3Pool(address(token0), address(token1));
 
         // Create and set up mock quoter
         mockQuoter = new MockReflexQuoter();

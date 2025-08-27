@@ -18,8 +18,8 @@ contract BasicReflexRouterTest is Test {
         // Simple setup
         vm.prank(owner);
         reflexRouter = new ReflexRouter();
-        
-        token0 = new MockToken("Token0", "TK0", 1000000 * 10**18);
+
+        token0 = new MockToken("Token0", "TK0", 1000000 * 10 ** 18);
     }
 
     function test_constructor() public {
@@ -33,11 +33,11 @@ contract BasicReflexRouterTest is Test {
 
     function test_setReflexQuoter_success() public {
         address newQuoter = address(0x123);
-        
+
         // Need to prank as the actual owner (tx.origin)
         vm.prank(reflexRouter.owner());
         reflexRouter.setReflexQuoter(newQuoter);
-        
+
         assertEq(reflexRouter.reflexQuoter(), newQuoter);
     }
 }
