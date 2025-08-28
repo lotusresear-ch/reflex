@@ -35,20 +35,23 @@ contract MaliciousReentrancyAfterSwap {
     TestableReflexAfterSwap public reflexAfterSwap;
     bool public shouldReenter;
     uint256 public callCount;
-    
+
     constructor(address _reflexAfterSwap) {
         reflexAfterSwap = TestableReflexAfterSwap(_reflexAfterSwap);
     }
-    
+
     function setShouldReenter(bool _shouldReenter) external {
         shouldReenter = _shouldReenter;
     }
-    
-    function attack(bytes32 poolKey, int256 amount0Delta, int256 amount1Delta, bool settle) external returns (uint256) {
+
+    function attack(bytes32 poolKey, int256 amount0Delta, int256 amount1Delta, bool settle)
+        external
+        returns (uint256)
+    {
         callCount++;
         return reflexAfterSwap.testReflexAfterSwap(poolKey, amount0Delta, amount1Delta, settle, address(this));
     }
-    
+
     // This is called during the reflexAfterSwap function execution
     function mockSwapResponse() external returns (uint256) {
         if (shouldReenter && callCount == 1) {
@@ -267,19 +270,19 @@ contract ReflexAfterSwapTest is Test {
         // Test graceful reentrancy protection
         // Create a malicious contract that attempts reentrancy
         MaliciousReentrancyAfterSwap attackerContract = new MaliciousReentrancyAfterSwap(address(reflexAfterSwap));
-        
+
         // Enable reentrancy attempt
         attackerContract.setShouldReenter(true);
-        
+
         // Attempt the attack - with graceful reentrancy guard, this should not revert
         // but should block the reentrancy attempt gracefully
         uint256 profit = attackerContract.attack(keccak256("pool1"), 1000, -500, true);
-        
+
         // Verify the attack was blocked gracefully
         // The first call should execute normally, but reentrancy attempts should return early with 0 profit
         assertEq(profit, 1000 * 10 ** 18, "First call should succeed normally");
         assertEq(attackerContract.callCount(), 1, "Only the first call should execute, reentrancy blocked gracefully");
-        
+
         // Test that normal sequential calls still work
         uint256 profit2 = reflexAfterSwap.testReflexAfterSwap(keccak256("pool2"), 2000, -1000, false, bob);
         assertEq(profit2, 1000 * 10 ** 18, "Sequential calls should work normally");
