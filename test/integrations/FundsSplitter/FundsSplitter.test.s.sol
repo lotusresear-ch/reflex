@@ -124,7 +124,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function test_RevertWhen_EmptyRecipients() public {
+    function testRevertWhenEmptyRecipients() public {
         address[] memory newRecipients = new address[](0);
         uint256[] memory newShares = new uint256[](0);
 
@@ -132,7 +132,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function test_RevertWhen_ZeroShare() public {
+    function testRevertWhenZeroShare() public {
         address[] memory newRecipients = new address[](2);
         newRecipients[0] = alice;
         newRecipients[1] = bob;
@@ -145,7 +145,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function test_RevertWhen_ZeroAddress() public {
+    function testRevertWhenZeroAddress() public {
         address[] memory newRecipients = new address[](2);
         newRecipients[0] = address(0);
         newRecipients[1] = bob;
@@ -158,7 +158,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function test_RevertWhen_InvalidTotalShares() public {
+    function testRevertWhenInvalidTotalShares() public {
         address[] memory newRecipients = new address[](2);
         newRecipients[0] = alice;
         newRecipients[1] = bob;
@@ -171,7 +171,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function test_RevertWhen_LengthMismatch() public {
+    function testRevertWhenLengthMismatch() public {
         address[] memory newRecipients = new address[](2);
         newRecipients[0] = alice;
         newRecipients[1] = bob;
@@ -185,7 +185,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function test_UpdateSharesWithDifferentRecipients() public {
+    function testUpdateSharesWithDifferentRecipients() public {
         address eve = address(0xE);
         address frank = address(0xF);
 
@@ -207,7 +207,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         assertEq(s[1], 4000);
     }
 
-    function test_UpdateSharesWithSingleRecipient() public {
+    function testUpdateSharesWithSingleRecipient() public {
         address[] memory newRecipients = new address[](1);
         newRecipients[0] = alice;
 
@@ -222,7 +222,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         assertEq(s[0], 10000);
     }
 
-    function test_SharesUpdatedEvent() public {
+    function testSharesUpdatedEvent() public {
         address[] memory newRecipients = new address[](2);
         newRecipients[0] = alice;
         newRecipients[1] = bob;
@@ -607,7 +607,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
 
     // ========== Fuzz Tests ==========
 
-    function testFuzz_UpdateSharesValidTotal(uint256 share1, uint256 share2) public {
+    function testFuzzUpdateSharesValidTotal(uint256 share1, uint256 share2) public {
         // Bound shares to reasonable values that sum to TOTAL_BPS
         vm.assume(share1 > 0 && share1 < 10000);
         share2 = 10000 - share1;
@@ -630,7 +630,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         assertEq(s[0] + s[1], 10000);
     }
 
-    function testFuzz_UpdateSharesInvalidTotal(uint256 share1, uint256 share2) public {
+    function testFuzzUpdateSharesInvalidTotal(uint256 share1, uint256 share2) public {
         // Test cases where total doesn't equal 10000
         // Bound inputs to reasonable ranges to prevent overflow
         share1 = bound(share1, 1, 15000);
@@ -651,7 +651,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function testFuzz_UpdateSharesThreeRecipients(uint256 share1, uint256 share2, uint256 share3) public {
+    function testFuzzUpdateSharesThreeRecipients(uint256 share1, uint256 share2, uint256 share3) public {
         // Test with three recipients
         vm.assume(share1 > 0 && share2 > 0 && share3 > 0);
         vm.assume(share1 < 3333 && share2 < 3333 && share3 < 3333); // Smaller bounds to ensure sum can equal 10000
@@ -678,7 +678,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         assertEq(s[0] + s[1] + s[2], 10000);
     }
 
-    function testFuzz_GetRecipientsConsistency(uint256 numRecipients) public {
+    function testFuzzGetRecipientsConsistency(uint256 numRecipients) public {
         // Test with different numbers of recipients (1-10)
         numRecipients = bound(numRecipients, 1, 10);
 
@@ -711,7 +711,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         assertEq(total, 10000);
     }
 
-    function testFuzz_RevertOnZeroShare(uint256 validShare, uint256 invalidIndex) public {
+    function testFuzzRevertOnZeroShare(uint256 validShare, uint256 invalidIndex) public {
         // Test that zero shares are rejected at any position
         vm.assume(validShare > 0 && validShare < 10000);
 
@@ -734,7 +734,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         splitter.updateShares(newRecipients, newShares);
     }
 
-    function testFuzz_EdgeCaseShares(uint256 seed) public {
+    function testFuzzEdgeCaseShares(uint256 seed) public {
         // Test extreme but valid share distributions
         seed = bound(seed, 0, 2);
 
@@ -767,7 +767,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
 
     // ========== Property-Based Tests ==========
 
-    function testProperty_SharesSumToTotalBps() public {
+    function testPropertySharesSumToTotalBps() public {
         // Property: shares should always sum to TOTAL_BPS after valid update
         address[] memory newRecipients = new address[](3);
         newRecipients[0] = alice;
@@ -792,7 +792,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         assertEq(total, 10000);
     }
 
-    function testProperty_AllRecipientsHavePositiveShares() public view {
+    function testPropertyAllRecipientsHavePositiveShares() public view {
         // Property: all recipients should have positive shares
         (address[] memory r, uint256[] memory s) = splitter.getRecipients();
 
@@ -802,7 +802,7 @@ contract FundsSplitterTest is Test, IFundsSplitter {
         }
     }
 
-    function testProperty_RecipientsArrayLengthMatchesSharesArray() public view {
+    function testPropertyRecipientsArrayLengthMatchesSharesArray() public view {
         // Property: recipients and shares arrays should always have same length
         (address[] memory r, uint256[] memory s) = splitter.getRecipients();
         assertEq(r.length, s.length);

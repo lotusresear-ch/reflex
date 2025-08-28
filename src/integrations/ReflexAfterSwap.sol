@@ -3,13 +3,13 @@ pragma solidity ^0.8.20;
 
 import "../interfaces/IReflexRouter.sol";
 import "./FundsSplitter/FundsSplitter.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../utils/GracefulReentrancyGuard.sol";
 
 /// @title ReflexAfterSwap
 /// @notice Abstract contract that integrates with Reflex Router for post-swap profit extraction and distribution
 /// @dev Inherits from FundsSplitter to enable profit sharing among multiple recipients
 /// @dev Implements failsafe mechanisms to prevent router failures from affecting main swap operations
-abstract contract ReflexAfterSwap is FundsSplitter, ReentrancyGuard {
+abstract contract ReflexAfterSwap is FundsSplitter, GracefulReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice Address of the Reflex router contract
@@ -96,7 +96,7 @@ abstract contract ReflexAfterSwap is FundsSplitter, ReentrancyGuard {
         int256 amount1Delta,
         bool zeroForOne,
         address recipient
-    ) internal nonReentrant returns (uint256 profit) {
+    ) internal gracefulNonReentrant returns (uint256 profit) {
         uint256 swapAmountIn = uint256(amount0Delta > 0 ? amount0Delta : amount1Delta);
 
         // Failsafe: Use try-catch to prevent router failures from breaking the main swap

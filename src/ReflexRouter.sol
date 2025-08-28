@@ -5,7 +5,7 @@ pragma abicoder v2;
 import "./interfaces/IReflexQuoter.sol";
 import "@reflex/interfaces/IReflexRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./utils/GracefulReentrancyGuard.sol";
 import "./libraries/DexTypes.sol";
 
 interface IUniswapV3Pool {
@@ -36,7 +36,7 @@ uint8 constant LOAN_CALLBACK_TYPE_UNI3 = 3; // Initial loan from uniswap v3
  * The contract uses flash loans to execute profitable arbitrage opportunities without requiring upfront capital
  * Supports multiple DEX types and handles callback-based flash loan mechanisms
  */
-contract ReflexRouter is IReflexRouter, ReentrancyGuard {
+contract ReflexRouter is IReflexRouter, GracefulReentrancyGuard {
     /// @notice The address of the contract owner/admin
     address public owner;
 
@@ -95,7 +95,7 @@ contract ReflexRouter is IReflexRouter, ReentrancyGuard {
     function triggerBackrun(bytes32 triggerPoolId, uint112 swapAmountIn, bool token0In, address recipient)
         external
         override
-        nonReentrant
+        gracefulNonReentrant
         returns (uint256 profit, address profitToken)
     {
         (

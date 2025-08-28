@@ -73,14 +73,14 @@ contract ReflexRouterTest is Test {
     // Constructor and Basic Setup Tests
     // =============================================================================
 
-    function test_constructor() public {
+    function testConstructor() public {
         ReflexRouter newRouter = new ReflexRouter();
         assertEq(newRouter.owner(), tx.origin);
         assertEq(newRouter.getReflexAdmin(), tx.origin);
         assertEq(newRouter.reflexQuoter(), address(0));
     }
 
-    function test_setReflexQuoter_success() public {
+    function testSetReflexQuoterSuccess() public {
         address newQuoter = address(0x123);
 
         vm.prank(reflexRouter.owner());
@@ -89,7 +89,7 @@ contract ReflexRouterTest is Test {
         assertEq(reflexRouter.reflexQuoter(), newQuoter);
     }
 
-    function test_setReflexQuoter_revertIfNotAdmin() public {
+    function testSetReflexQuoterRevertIfNotAdmin() public {
         address newQuoter = address(0x123);
 
         vm.prank(alice);
@@ -97,7 +97,7 @@ contract ReflexRouterTest is Test {
         reflexRouter.setReflexQuoter(newQuoter);
     }
 
-    function test_getReflexAdmin() public view {
+    function testGetReflexAdmin() public view {
         assertEq(reflexRouter.getReflexAdmin(), reflexRouter.owner());
     }
 
