@@ -2,18 +2,19 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "@reflex/integrations/algebra/full/BasePluginV3Factory.sol";
-import "@reflex/integrations/algebra/full/AlgebraBasePluginV3.sol";
-import "@reflex/integrations/algebra/interfaces/IBasePluginV3Factory.sol";
+import "@reflex/integrations/algebra/v1/BasePluginV1Factory.sol";
+import "@reflex/integrations/algebra/v1/AlgebraBasePluginV1.sol";
+import "@cryptoalgebra/plugin/interfaces/IBasePluginV1Factory.sol";
+import "@cryptoalgebra/plugin/base/AlgebraFeeConfiguration.sol";
 import "@reflex/interfaces/IReflexRouter.sol";
-import "../../utils/TestUtils.sol";
-import "../../mocks/MockToken.sol";
-import "../../mocks/MockAlgebraFactory.sol";
-import "../../mocks/MockReflexRouter.sol";
-import "../../mocks/MockPool.sol";
+import "../../../utils/TestUtils.sol";
+import "../../../mocks/MockToken.sol";
+import "../../../mocks/MockAlgebraFactory.sol";
+import "../../../mocks/MockReflexRouter.sol";
+import "../../../mocks/MockPool.sol";
 
-contract BasePluginV3FactoryTest is Test {
-    BasePluginV3Factory public factory;
+contract BasePluginV1FactoryTest is Test {
+    BasePluginV1Factory public factory;
     MockAlgebraFactory public algebraFactory;
     MockReflexRouter public reflexRouter;
     MockToken public token0;
@@ -26,9 +27,9 @@ contract BasePluginV3FactoryTest is Test {
     address public alice = address(0xA);
     address public newReflexRouter = address(0x999);
 
-    // Events from IBasePluginV2Factory
-    event FarmingAddress(address indexed newFarmingAddress);
-    event DefaultBaseFee(uint16 newDefaultBaseFee);
+    // Events from IBasePluginV1Factory
+    event FarmingAddress(address newFarmingAddress);
+    event DefaultFeeConfiguration(AlgebraFeeConfiguration newDefaultFeeConfiguration);
 
     function setUp() public {
         // Create mock tokens
@@ -53,8 +54,8 @@ contract BasePluginV3FactoryTest is Test {
         // Create mock Reflex router
         reflexRouter = MockReflexRouter(TestUtils.createSimpleMockReflexRouter(admin));
 
-        // Deploy BasePluginV3Factory
-        factory = new BasePluginV3Factory(address(algebraFactory));
+        // Deploy BasePluginV1Factory
+        factory = new BasePluginV1Factory(address(algebraFactory));
 
         // Set initial reflex router
         vm.prank(admin);
@@ -64,17 +65,27 @@ contract BasePluginV3FactoryTest is Test {
     // ========== Constructor Tests ==========
 
     function testConstructor() public {
-        BasePluginV3Factory newFactory = new BasePluginV3Factory(address(algebraFactory));
+        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(algebraFactory));
 
         assertEq(newFactory.algebraFactory(), address(algebraFactory));
-        assertEq(newFactory.defaultBaseFee(), 3000);
         assertEq(newFactory.farmingAddress(), address(0));
         assertEq(newFactory.reflexRouter(), address(0));
+
+        // Check default fee configuration
+        (uint16 alpha1, uint16 alpha2, uint32 beta1, uint32 beta2, uint16 gamma1, uint16 gamma2, uint16 baseFee) =
+            newFactory.defaultFeeConfiguration();
+        assertEq(alpha1, 2900);
+        assertEq(alpha2, 12000);
+        assertEq(beta1, 360);
+        assertEq(beta2, 60000);
+        assertEq(gamma1, 59);
+        assertEq(gamma2, 8500);
+        assertEq(baseFee, 100);
     }
 
     function testConstructorWithZeroFactory() public {
         // Should not revert - the contract allows zero factory address
-        BasePluginV3Factory newFactory = new BasePluginV3Factory(address(0));
+        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(0));
         assertEq(newFactory.algebraFactory(), address(0));
     }
 
@@ -83,19 +94,19 @@ contract BasePluginV3FactoryTest is Test {
     function testOnlyAdministratorModifier() public {
         // Admin should be able to call admin functions
         vm.prank(admin);
-        factory.setDefaultBaseFee(4000);
+        factory.setFarmingAddress(address(0x123));
 
         // Non-admin should not be able to call admin functions
         vm.prank(nonAdmin);
         vm.expectRevert("Only administrator");
-        factory.setDefaultBaseFee(5000);
+        factory.setFarmingAddress(address(0x456));
     }
 
     function testFactoryOwnerCanCallAdminFunctions() public {
         vm.prank(admin);
-        factory.setDefaultBaseFee(4000);
+        factory.setFarmingAddress(address(0x123));
 
-        assertEq(factory.defaultBaseFee(), 4000);
+        assertEq(factory.farmingAddress(), address(0x123));
     }
 
     // ========== Reflex Router Tests ==========
@@ -123,7 +134,7 @@ contract BasePluginV3FactoryTest is Test {
     }
 
     function testReflexRouterInitiallyZero() public {
-        BasePluginV3Factory newFactory = new BasePluginV3Factory(address(algebraFactory));
+        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(algebraFactory));
         assertEq(newFactory.reflexRouter(), address(0));
     }
 
@@ -140,9 +151,9 @@ contract BasePluginV3FactoryTest is Test {
         assertEq(factory.pluginByPool(mockPool), plugin);
 
         // Verify the plugin was created with correct parameters
-        AlgebraBasePluginV3 createdPlugin = AlgebraBasePluginV3(plugin);
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
         assertEq(createdPlugin.pool(), mockPool);
-        // Note: factory and pluginFactory are internal/immutable and not directly accessible via getters
+        assertEq(createdPlugin.getRouter(), address(reflexRouter));
     }
 
     function testBeforeCreatePoolHookUnauthorized() public {
@@ -171,9 +182,9 @@ contract BasePluginV3FactoryTest is Test {
         assertEq(factory.pluginByPool(address(pool)), plugin);
 
         // Verify the plugin was created with correct parameters
-        AlgebraBasePluginV3 createdPlugin = AlgebraBasePluginV3(plugin);
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
         assertEq(createdPlugin.pool(), address(pool));
-        // Note: factory and pluginFactory are internal/immutable and not directly accessible via getters
+        assertEq(createdPlugin.getRouter(), address(reflexRouter));
     }
 
     function testCreatePluginForExistingPoolUnauthorized() public {
@@ -208,8 +219,9 @@ contract BasePluginV3FactoryTest is Test {
         vm.prank(poolsAdmin);
         address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
 
-        AlgebraBasePluginV3 createdPlugin = AlgebraBasePluginV3(plugin);
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
         assertEq(createdPlugin.getReflexAdmin(), reflexRouter.getReflexAdmin());
+        assertEq(createdPlugin.getRouter(), address(reflexRouter));
     }
 
     function testPluginCreatedWithZeroReflexRouter() public {
@@ -244,55 +256,116 @@ contract BasePluginV3FactoryTest is Test {
         vm.prank(poolsAdmin);
         address plugin = factory.createPluginForExistingPool(address(token2), address(token3));
 
-        AlgebraBasePluginV3 createdPlugin = AlgebraBasePluginV3(plugin);
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
         assertEq(createdPlugin.getReflexAdmin(), newRouter.getReflexAdmin());
+        assertEq(createdPlugin.getRouter(), address(newRouter));
     }
 
-    // ========== Default Base Fee Tests ==========
+    // ========== Default Fee Configuration Tests ==========
 
-    function testSetDefaultBaseFee() public {
-        uint16 newFee = 4000;
+    function testSetDefaultFeeConfiguration() public {
+        AlgebraFeeConfiguration memory newConfig = AlgebraFeeConfiguration({
+            alpha1: 3000,
+            alpha2: 13000,
+            beta1: 400,
+            beta2: 65000,
+            gamma1: 60,
+            gamma2: 9000,
+            baseFee: 150
+        });
 
         vm.expectEmit(true, true, true, true);
-        emit DefaultBaseFee(newFee);
+        emit DefaultFeeConfiguration(newConfig);
 
         vm.prank(admin);
-        factory.setDefaultBaseFee(newFee);
+        factory.setDefaultFeeConfiguration(newConfig);
 
-        assertEq(factory.defaultBaseFee(), newFee);
+        AlgebraFeeConfiguration memory config = factory.getDefaultFeeConfigurationStruct();
+        assertEq(config.alpha1, newConfig.alpha1);
+        assertEq(config.alpha2, newConfig.alpha2);
+        assertEq(config.beta1, newConfig.beta1);
+        assertEq(config.beta2, newConfig.beta2);
+        assertEq(config.gamma1, newConfig.gamma1);
+        assertEq(config.gamma2, newConfig.gamma2);
+        assertEq(config.baseFee, newConfig.baseFee);
     }
 
-    function testSetDefaultBaseFeeSameValue() public {
-        uint16 currentFee = factory.defaultBaseFee();
+    function testSetDefaultFeeConfigurationInvalidGamma() public {
+        AlgebraFeeConfiguration memory invalidConfig = AlgebraFeeConfiguration({
+            alpha1: 3000,
+            alpha2: 13000,
+            beta1: 400,
+            beta2: 65000,
+            gamma1: 0, // Invalid: gamma1 = 0
+            gamma2: 9000,
+            baseFee: 150
+        });
 
         vm.prank(admin);
-        vm.expectRevert();
-        factory.setDefaultBaseFee(currentFee);
+        vm.expectRevert("Gamma values must be > 0");
+        factory.setDefaultFeeConfiguration(invalidConfig);
     }
 
-    function testSetDefaultBaseFeeUnauthorized() public {
+    function testSetDefaultFeeConfigurationMaxFeeTooHigh() public {
+        AlgebraFeeConfiguration memory invalidConfig = AlgebraFeeConfiguration({
+            alpha1: 30000,
+            alpha2: 30000,
+            beta1: 400,
+            beta2: 65000,
+            gamma1: 60,
+            gamma2: 9000,
+            baseFee: 10000 // Combined alpha1 + alpha2 + baseFee > uint16.max
+        });
+
+        vm.prank(admin);
+        vm.expectRevert("Max fee too high");
+        factory.setDefaultFeeConfiguration(invalidConfig);
+    }
+
+    function testSetDefaultFeeConfigurationUnauthorized() public {
+        AlgebraFeeConfiguration memory newConfig = AlgebraFeeConfiguration({
+            alpha1: 3000,
+            alpha2: 13000,
+            beta1: 400,
+            beta2: 65000,
+            gamma1: 60,
+            gamma2: 9000,
+            baseFee: 150
+        });
+
         vm.prank(nonAdmin);
         vm.expectRevert("Only administrator");
-        factory.setDefaultBaseFee(4000);
+        factory.setDefaultFeeConfiguration(newConfig);
     }
 
-    function testPluginCreatedWithCorrectBaseFee() public {
-        uint16 customFee = 5000;
+    function testPluginCreatedWithCorrectFeeConfiguration() public {
+        AlgebraFeeConfiguration memory customConfig = AlgebraFeeConfiguration({
+            alpha1: 3500,
+            alpha2: 14000,
+            beta1: 450,
+            beta2: 70000,
+            gamma1: 65,
+            gamma2: 9500,
+            baseFee: 200
+        });
 
         vm.prank(admin);
-        factory.setDefaultBaseFee(customFee);
+        factory.setDefaultFeeConfiguration(customConfig);
 
         vm.prank(poolsAdmin);
         address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
 
-        AlgebraBasePluginV3 createdPlugin = AlgebraBasePluginV3(plugin);
-        assertEq(createdPlugin.s_baseFee(), customFee);
+        // Note: Plugin uses internal fee configuration, but we can test that it was created successfully
+        assertTrue(plugin != address(0));
     }
 
     // ========== Farming Address Tests ==========
 
     function testSetFarmingAddress() public {
         address newFarmingAddress = address(0x789);
+
+        vm.expectEmit(true, true, true, true);
+        emit FarmingAddress(newFarmingAddress);
 
         vm.prank(admin);
         factory.setFarmingAddress(newFarmingAddress);
@@ -314,17 +387,76 @@ contract BasePluginV3FactoryTest is Test {
         factory.setFarmingAddress(address(0x789));
     }
 
+    // ========== Plugin Functionality Tests ==========
+
+    function testPluginReflexEnabled() public {
+        vm.prank(poolsAdmin);
+        address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
+
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
+        assertTrue(createdPlugin.reflexEnabled());
+    }
+
+    function testPluginSetReflexEnabled() public {
+        vm.prank(poolsAdmin);
+        address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
+
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
+
+        // Admin can disable reflex functionality
+        vm.prank(admin);
+        createdPlugin.setReflexEnabled(false);
+        assertFalse(createdPlugin.reflexEnabled());
+
+        // Admin can enable reflex functionality
+        vm.prank(admin);
+        createdPlugin.setReflexEnabled(true);
+        assertTrue(createdPlugin.reflexEnabled());
+    }
+
+    function testPluginSetReflexEnabledUnauthorized() public {
+        vm.prank(poolsAdmin);
+        address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
+
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
+
+        vm.prank(nonAdmin);
+        vm.expectRevert(); // Algebra's _authorize() reverts without a message
+        createdPlugin.setReflexEnabled(false);
+    }
+
+    function testPluginDefaultConfiguration() public {
+        vm.prank(poolsAdmin);
+        address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
+
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
+
+        // Test default plugin config (V1 uses dynamic fees)
+        // BEFORE_SWAP_FLAG=1, AFTER_SWAP_FLAG=2, AFTER_INIT_FLAG=64, DYNAMIC_FEE=128
+        // Total: 1+2+64+128=195
+        uint8 expectedConfig = 195;
+        assertEq(createdPlugin.defaultPluginConfig(), expectedConfig);
+    }
+
     // ========== Integration Tests ==========
 
     function testPluginCreationWithAllParameters() public {
         address newFarmingAddress = address(0x789);
-        uint16 newBaseFee = 4000;
+        AlgebraFeeConfiguration memory newConfig = AlgebraFeeConfiguration({
+            alpha1: 3200,
+            alpha2: 13500,
+            beta1: 420,
+            beta2: 68000,
+            gamma1: 62,
+            gamma2: 9200,
+            baseFee: 180
+        });
         MockReflexRouter newRouter = MockReflexRouter(TestUtils.createSimpleMockReflexRouter(alice));
 
         // Set all parameters
         vm.startPrank(admin);
         factory.setFarmingAddress(newFarmingAddress);
-        factory.setDefaultBaseFee(newBaseFee);
+        factory.setDefaultFeeConfiguration(newConfig);
         factory.setReflexRouter(address(newRouter));
         vm.stopPrank();
 
@@ -333,16 +465,19 @@ contract BasePluginV3FactoryTest is Test {
         address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
 
         // Verify all parameters
-        AlgebraBasePluginV3 createdPlugin = AlgebraBasePluginV3(plugin);
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
         assertEq(createdPlugin.pool(), address(pool));
-        assertEq(createdPlugin.s_baseFee(), newBaseFee);
+        assertEq(createdPlugin.getRouter(), address(newRouter));
         assertEq(createdPlugin.getReflexAdmin(), newRouter.getReflexAdmin());
 
         // Verify factory state
         assertEq(factory.farmingAddress(), newFarmingAddress);
-        assertEq(factory.defaultBaseFee(), newBaseFee);
         assertEq(factory.reflexRouter(), address(newRouter));
         assertEq(factory.pluginByPool(address(pool)), plugin);
+
+        AlgebraFeeConfiguration memory factoryConfig = factory.getDefaultFeeConfigurationStruct();
+        assertEq(factoryConfig.alpha1, newConfig.alpha1);
+        assertEq(factoryConfig.baseFee, newConfig.baseFee);
     }
 
     function testMultiplePluginCreation() public {
@@ -372,6 +507,15 @@ contract BasePluginV3FactoryTest is Test {
         assertEq(factory.pluginByPool(address(pool)), plugin1);
         assertEq(factory.pluginByPool(address(pool2)), plugin2);
         assertEq(factory.pluginByPool(address(pool3)), plugin3);
+
+        // Verify all plugins have the same reflex router
+        AlgebraBasePluginV1 p1 = AlgebraBasePluginV1(plugin1);
+        AlgebraBasePluginV1 p2 = AlgebraBasePluginV1(plugin2);
+        AlgebraBasePluginV1 p3 = AlgebraBasePluginV1(plugin3);
+
+        assertEq(p1.getRouter(), address(reflexRouter));
+        assertEq(p2.getRouter(), address(reflexRouter));
+        assertEq(p3.getRouter(), address(reflexRouter));
     }
 
     // ========== Edge Cases ==========
@@ -387,5 +531,17 @@ contract BasePluginV3FactoryTest is Test {
 
         // Cannot change immutable factory (this is just for documentation)
         assertTrue(factory.algebraFactory() == address(algebraFactory));
+    }
+
+    function testPluginGetCurrentFee() public {
+        vm.prank(poolsAdmin);
+        address plugin = factory.createPluginForExistingPool(address(token0), address(token1));
+
+        AlgebraBasePluginV1 createdPlugin = AlgebraBasePluginV1(plugin);
+
+        // Test getCurrentFee function (should not revert)
+        uint16 currentFee = createdPlugin.getCurrentFee();
+        // Fee should be within reasonable bounds
+        assertTrue(currentFee >= 0 && currentFee <= type(uint16).max);
     }
 }

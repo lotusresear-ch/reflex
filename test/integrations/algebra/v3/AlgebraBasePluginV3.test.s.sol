@@ -4,7 +4,9 @@ pragma solidity =0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {AlgebraBasePluginV3} from "@reflex/integrations/algebra/full/AlgebraBasePluginV3.sol";
 import {IReflexRouter} from "@reflex/interfaces/IReflexRouter.sol";
-import {TestUtils, MockToken, MockReflexRouter, MockAlgebraFactory, MockAlgebraPool} from "../../utils/TestUtils.sol";
+import {
+    TestUtils, MockToken, MockReflexRouter, MockAlgebraFactory, MockAlgebraPool
+} from "../../../utils/TestUtils.sol";
 import {IAlgebraPlugin} from "@cryptoalgebra/core/interfaces/plugin/IAlgebraPlugin.sol";
 
 contract AlgebraBasePluginV3Test is Test {
