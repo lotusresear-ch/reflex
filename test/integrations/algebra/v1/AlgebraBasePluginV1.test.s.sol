@@ -82,7 +82,7 @@ contract AlgebraBasePluginV1Test is Test {
 
         vm.prank(admin);
         plugin.updateShares(recipients, shares);
-    }    // ========== Constructor Tests ==========
+    } // ========== Constructor Tests ==========
 
     function testConstructor() public view {
         assertEq(plugin.pool(), address(pool));
@@ -102,7 +102,7 @@ contract AlgebraBasePluginV1Test is Test {
     function testBeforeInitialize() public {
         vm.prank(address(pool));
         bytes4 selector = plugin.beforeInitialize(address(0), 0);
-        
+
         assertEq(selector, plugin.beforeInitialize.selector);
     }
 
@@ -115,7 +115,7 @@ contract AlgebraBasePluginV1Test is Test {
     function testAfterInitialize() public {
         vm.prank(address(pool));
         bytes4 selector = plugin.afterInitialize(address(0), 0, 0);
-        
+
         assertEq(selector, plugin.afterInitialize.selector);
     }
 
@@ -136,16 +136,16 @@ contract AlgebraBasePluginV1Test is Test {
         (bytes4 selector, uint24 fee, uint24 fee2) = plugin.beforeSwap(
             address(0),
             alice, // sender
-            true,  // zeroToOne
-            1000,  // amountSpecified
-            0,     // limitSqrtPrice
+            true, // zeroToOne
+            1000, // amountSpecified
+            0, // limitSqrtPrice
             false, // payInAdvance
-            ""     // data
+            "" // data
         );
 
         assertEq(selector, plugin.beforeSwap.selector);
         assertTrue(fee > 0); // Should return dynamic fee
-        assertEq(fee2, 0);   // Second fee should be 0
+        assertEq(fee2, 0); // Second fee should be 0
     }
 
     function testBeforeSwapReflexRouterGetsReducedFee() public {
@@ -179,13 +179,13 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         bytes4 selector = plugin.afterSwap(
             address(0),
-            alice,  // recipient
-            true,   // zeroToOne
-            1000,   // amountSpecified
-            0,      // limitSqrtPrice
-            500,    // amount0
-            -250,   // amount1
-            ""      // data
+            alice, // recipient
+            true, // zeroToOne
+            1000, // amountSpecified
+            0, // limitSqrtPrice
+            500, // amount0
+            -250, // amount1
+            "" // data
         );
 
         assertEq(selector, plugin.afterSwap.selector);
@@ -197,13 +197,13 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         plugin.afterSwap(
             address(0),
-            alice,  // recipient
-            true,   // zeroToOne
-            1000,   // amountSpecified
-            0,      // limitSqrtPrice
-            500,    // amount0
-            -250,   // amount1
-            ""      // data
+            alice, // recipient
+            true, // zeroToOne
+            1000, // amountSpecified
+            0, // limitSqrtPrice
+            500, // amount0
+            -250, // amount1
+            "" // data
         );
 
         // Alice should receive profit from ReflexAfterSwap
@@ -220,13 +220,13 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         plugin.afterSwap(
             address(0),
-            alice,  // recipient
-            true,   // zeroToOne
-            1000,   // amountSpecified
-            0,      // limitSqrtPrice
-            500,    // amount0
-            -250,   // amount1
-            ""      // data
+            alice, // recipient
+            true, // zeroToOne
+            1000, // amountSpecified
+            0, // limitSqrtPrice
+            500, // amount0
+            -250, // amount1
+            "" // data
         );
 
         // Alice should not receive profit when reflex is disabled
@@ -245,11 +245,11 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         (bytes4 selector, uint24 fee) = plugin.beforeModifyPosition(
             address(0),
-            alice,  // owner
-            0,      // bottomTick
-            0,      // topTick
-            100,    // liquidityDelta
-            ""      // data
+            alice, // owner
+            0, // bottomTick
+            0, // topTick
+            100, // liquidityDelta
+            "" // data
         );
 
         assertEq(selector, plugin.beforeModifyPosition.selector);
@@ -260,13 +260,13 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         bytes4 selector = plugin.afterModifyPosition(
             address(0),
-            alice,  // owner
-            0,      // bottomTick
-            0,      // topTick
-            100,    // liquidityDelta
-            0,      // amount0
-            0,      // amount1
-            ""      // data
+            alice, // owner
+            0, // bottomTick
+            0, // topTick
+            100, // liquidityDelta
+            0, // amount0
+            0, // amount1
+            "" // data
         );
 
         assertEq(selector, plugin.afterModifyPosition.selector);
@@ -278,10 +278,10 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         bytes4 selector = plugin.beforeFlash(
             address(0),
-            alice,  // recipient
-            1000,   // amount0
-            500,    // amount1
-            ""      // data
+            alice, // recipient
+            1000, // amount0
+            500, // amount1
+            "" // data
         );
 
         assertEq(selector, plugin.beforeFlash.selector);
@@ -291,12 +291,12 @@ contract AlgebraBasePluginV1Test is Test {
         vm.prank(address(pool));
         bytes4 selector = plugin.afterFlash(
             address(0),
-            alice,  // recipient
-            1000,   // amount0
-            500,    // amount1
-            100,    // paid0
-            50,     // paid1
-            ""      // data
+            alice, // recipient
+            1000, // amount0
+            500, // amount1
+            100, // paid0
+            50, // paid1
+            "" // data
         );
 
         assertEq(selector, plugin.afterFlash.selector);
@@ -306,7 +306,7 @@ contract AlgebraBasePluginV1Test is Test {
 
     function testGetCurrentFee() public view {
         uint16 fee = plugin.getCurrentFee();
-        
+
         // Fee should be within reasonable bounds
         assertTrue(fee > 0);
         assertTrue(fee <= type(uint16).max);
@@ -315,7 +315,7 @@ contract AlgebraBasePluginV1Test is Test {
     function testGetCurrentFeeConsistency() public view {
         uint16 fee1 = plugin.getCurrentFee();
         uint16 fee2 = plugin.getCurrentFee();
-        
+
         // Should return same fee for same conditions
         assertEq(fee1, fee2);
     }
@@ -378,7 +378,7 @@ contract AlgebraBasePluginV1Test is Test {
 
     function testReflexAfterSwapIntegration() public {
         uint256 aliceInitialBalance = profitToken.balanceOf(alice);
-        
+
         // Mock the pool ID generation - this is internal logic verification
         // bytes32 expectedPoolId = bytes32(uint256(uint160(address(pool))));
 
@@ -451,11 +451,9 @@ contract AlgebraBasePluginV1Test is Test {
 
     // ========== Fuzz Tests ==========
 
-    function testFuzzBeforeSwapReflexRouterAlwaysBaseFee(
-        bool zeroToOne,
-        int256 amountSpecified,
-        address randomSender
-    ) public {
+    function testFuzzBeforeSwapReflexRouterAlwaysBaseFee(bool zeroToOne, int256 amountSpecified, address randomSender)
+        public
+    {
         vm.assume(randomSender != address(reflexRouter));
         vm.assume(amountSpecified != 0);
 
@@ -464,37 +462,20 @@ contract AlgebraBasePluginV1Test is Test {
         plugin.afterInitialize(address(0), 0, 0);
 
         vm.prank(address(pool));
-        (, uint24 reflexFee,) = plugin.beforeSwap(
-            address(0),
-            address(reflexRouter),
-            zeroToOne,
-            amountSpecified,
-            0,
-            false,
-            ""
-        );
+        (, uint24 reflexFee,) =
+            plugin.beforeSwap(address(0), address(reflexRouter), zeroToOne, amountSpecified, 0, false, "");
 
         vm.prank(address(pool));
-        (, uint24 normalFee,) = plugin.beforeSwap(
-            address(0),
-            randomSender,
-            zeroToOne,
-            amountSpecified,
-            0,
-            false,
-            ""
-        );
+        (, uint24 normalFee,) = plugin.beforeSwap(address(0), randomSender, zeroToOne, amountSpecified, 0, false, "");
 
         assertEq(reflexFee, 1, "ReflexRouter should always get minimal fee");
         assertTrue(normalFee > reflexFee, "Normal users should pay higher fees");
     }
 
-    function testFuzzBeforeSwapNonReflexRouterPaysFee(
-        address sender,
-        bool zeroToOne,
-        int256 amountSpecified
+    function testFuzzBeforeSwapNonReflexRouterPaysFee(address sender, bool zeroToOne, int256 amountSpecified)
         // address randomAddress - unused parameter
-    ) public {
+        public
+    {
         vm.assume(sender != address(reflexRouter));
         vm.assume(sender != address(0));
         vm.assume(amountSpecified != 0);
@@ -504,43 +485,21 @@ contract AlgebraBasePluginV1Test is Test {
         plugin.afterInitialize(address(0), 0, 0);
 
         vm.prank(address(pool));
-        (, uint24 fee,) = plugin.beforeSwap(
-            address(0),
-            sender,
-            zeroToOne,
-            amountSpecified,
-            0,
-            false,
-            ""
-        );
+        (, uint24 fee,) = plugin.beforeSwap(address(0), sender, zeroToOne, amountSpecified, 0, false, "");
 
         assertTrue(fee > 1, "Non-ReflexRouter senders should pay dynamic fees");
     }
 
-    function testFuzzAfterSwap(
-        int256 amount0,
-        int256 amount1,
-        bool zeroToOne,
-        address recipient
-    ) public {
+    function testFuzzAfterSwap(int256 amount0, int256 amount1, bool zeroToOne, address recipient) public {
         vm.assume(recipient != address(0));
 
         uint256 initialBalance = profitToken.balanceOf(recipient);
 
         vm.prank(address(pool));
-        bytes4 selector = plugin.afterSwap(
-            address(0),
-            recipient,
-            zeroToOne,
-            1000,
-            0,
-            amount0,
-            amount1,
-            ""
-        );
+        bytes4 selector = plugin.afterSwap(address(0), recipient, zeroToOne, 1000, 0, amount0, amount1, "");
 
         assertEq(selector, plugin.afterSwap.selector);
-        
+
         // If reflex is enabled, recipient might receive profit
         if (plugin.reflexEnabled()) {
             assertTrue(profitToken.balanceOf(recipient) >= initialBalance);
@@ -552,19 +511,15 @@ contract AlgebraBasePluginV1Test is Test {
 
         // Create plugin with different pool
         MockPool differentPool = MockPool(TestUtils.createMockPool(address(0x3), address(0x4), address(factory)));
-        
+
         // AlgebraBasePluginV1 pluginWithDifferentPool = new AlgebraBasePluginV1(
         new AlgebraBasePluginV1(
-            address(differentPool),
-            address(factory),
-            address(this),
-            defaultConfig,
-            address(reflexRouter)
+            address(differentPool), address(factory), address(this), defaultConfig, address(reflexRouter)
         );
 
         // Pool ID should be derived from pool address
         // bytes32 expectedPoolId = bytes32(uint256(uint160(address(differentPool))));
-        
+
         // This is internal logic verification - we check that different pools generate different IDs
         assertTrue(address(differentPool) != address(pool));
     }
@@ -580,14 +535,14 @@ contract AlgebraBasePluginV1Test is Test {
 
         // Simulate some swaps to change volatility
         vm.startPrank(address(pool));
-        for (uint i = 0; i < 5; i++) {
+        for (uint256 i = 0; i < 5; i++) {
             plugin.beforeSwap(address(0), alice, true, 1000, 0, false, "");
             plugin.afterSwap(address(0), alice, true, 1000, 0, 500, -250, "");
         }
         vm.stopPrank();
 
         uint16 finalFee = plugin.getCurrentFee();
-        
+
         // Fee might have changed due to volatility tracking
         // At minimum, it should still be a valid fee
         assertTrue(finalFee > 0);
@@ -601,27 +556,11 @@ contract AlgebraBasePluginV1Test is Test {
 
         // Get dynamic fee for normal user
         vm.prank(address(pool));
-        (, uint24 normalFee,) = plugin.beforeSwap(
-            address(0),
-            alice,
-            true,
-            1000,
-            0,
-            false,
-            ""
-        );
+        (, uint24 normalFee,) = plugin.beforeSwap(address(0), alice, true, 1000, 0, false, "");
 
         // Get fee for ReflexRouter
         vm.prank(address(pool));
-        (, uint24 reflexFee,) = plugin.beforeSwap(
-            address(0),
-            address(reflexRouter),
-            true,
-            1000,
-            0,
-            false,
-            ""
-        );
+        (, uint24 reflexFee,) = plugin.beforeSwap(address(0), address(reflexRouter), true, 1000, 0, false, "");
 
         assertTrue(normalFee > 1, "Normal users should pay dynamic fee");
         assertEq(reflexFee, 1, "ReflexRouter should get minimal fee regardless of dynamic fee");
