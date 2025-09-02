@@ -65,7 +65,7 @@ contract AlgebraBasePluginV1 is DynamicFeePlugin, FarmingProxyPlugin, Volatility
         return IAlgebraPlugin.afterModifyPosition.selector;
     }
 
-    function beforeSwap(address, address sender, bool, int256, uint160, bool, bytes calldata)
+    function beforeSwap(address sender, address, bool, int256, uint160, bool, bytes calldata)
         external
         override
         onlyPool
