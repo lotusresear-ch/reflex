@@ -92,8 +92,10 @@ contract AlgebraBasePluginV1 is DynamicFeePlugin, FarmingProxyPlugin, Volatility
         int256 amount1,
         bytes calldata
     ) external override onlyPool returns (bytes4) {
-        // Call the parent's afterSwap first to handle volatility updates
-        _updateVirtualPoolTick(zeroToOne);
+        if (incentive != address(0)) {
+            // If there's an active incentive, skip ReflexAfterSwap to avoid conflicts
+            _updateVirtualPoolTick(zeroToOne);
+        }
 
         // Only execute ReflexAfterSwap if enabled
         if (reflexEnabled) {
