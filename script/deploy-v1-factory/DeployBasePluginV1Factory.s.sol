@@ -3,7 +3,7 @@ pragma solidity =0.8.20;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import {BasePluginV1Factory} from "../src/integrations/algebra/v1/BasePluginV1Factory.sol";
+import {BasePluginV1Factory} from "../../src/integrations/algebra/v1/BasePluginV1Factory.sol";
 import {AlgebraFeeConfiguration} from "@cryptoalgebra/plugin/base/AlgebraFeeConfiguration.sol";
 
 /**
@@ -78,7 +78,7 @@ contract DeployBasePluginV1Factory is Script {
         vm.startBroadcast();
 
         // Deploy the factory contract
-        factory = new BasePluginV1Factory(algebraFactoryAddress);
+        factory = new BasePluginV1Factory(algebraFactoryAddress, reflexRouterAddress);
 
         // Configure the factory
         _configureFactory();
@@ -162,10 +162,6 @@ contract DeployBasePluginV1Factory is Script {
     function _configureFactory() internal {
         console.log("Configuring factory...");
 
-        // Set ReflexRouter address
-        factory.setReflexRouter(reflexRouterAddress);
-        console.log("ReflexRouter address set");
-
         // Set farming address if provided
         if (farmingAddress != address(0)) {
             factory.setFarmingAddress(farmingAddress);
@@ -241,7 +237,7 @@ contract DeployBasePluginV1Factory is Script {
         inputs[2] = vm.toString(address(factory));
         inputs[3] = "src/integrations/algebra/v1/BasePluginV1Factory.sol:BasePluginV1Factory";
         inputs[4] = "--constructor-args";
-        inputs[5] = vm.toString(abi.encode(algebraFactoryAddress));
+        inputs[5] = vm.toString(abi.encode(algebraFactoryAddress, reflexRouterAddress));
         inputs[6] = "--etherscan-api-key";
         inputs[7] = vm.envString("ETHERSCAN_API_KEY");
 
@@ -252,7 +248,7 @@ contract DeployBasePluginV1Factory is Script {
             console.log("You can verify manually with:");
             console.log("forge verify-contract", vm.toString(address(factory)));
             console.log("src/integrations/algebra/v1/BasePluginV1Factory.sol:BasePluginV1Factory");
-            console.log("--constructor-args", vm.toString(abi.encode(algebraFactoryAddress)));
+            console.log("--constructor-args", vm.toString(abi.encode(algebraFactoryAddress, reflexRouterAddress)));
         }
     }
 

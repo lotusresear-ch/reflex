@@ -55,21 +55,20 @@ contract BasePluginV1FactoryTest is Test {
         reflexRouter = MockReflexRouter(TestUtils.createSimpleMockReflexRouter(admin));
 
         // Deploy BasePluginV1Factory
-        factory = new BasePluginV1Factory(address(algebraFactory));
+        factory = new BasePluginV1Factory(address(algebraFactory), address(reflexRouter));
 
         // Set initial reflex router
-        vm.prank(admin);
-        factory.setReflexRouter(address(reflexRouter));
+        // Router is now set in constructor, no need to set separately
     }
 
     // ========== Constructor Tests ==========
 
     function testConstructor() public {
-        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(algebraFactory));
+        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(algebraFactory), address(reflexRouter));
 
         assertEq(newFactory.algebraFactory(), address(algebraFactory));
+        assertEq(newFactory.reflexRouter(), address(reflexRouter));
         assertEq(newFactory.farmingAddress(), address(0));
-        assertEq(newFactory.reflexRouter(), address(0));
 
         // Check default fee configuration
         (uint16 alpha1, uint16 alpha2, uint32 beta1, uint32 beta2, uint16 gamma1, uint16 gamma2, uint16 baseFee) =
@@ -85,8 +84,9 @@ contract BasePluginV1FactoryTest is Test {
 
     function testConstructorWithZeroFactory() public {
         // Should not revert - the contract allows zero factory address
-        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(0));
+        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(0), address(reflexRouter));
         assertEq(newFactory.algebraFactory(), address(0));
+        assertEq(newFactory.reflexRouter(), address(reflexRouter));
     }
 
     // ========== Access Control Tests ==========
@@ -134,7 +134,7 @@ contract BasePluginV1FactoryTest is Test {
     }
 
     function testReflexRouterInitiallyZero() public {
-        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(algebraFactory));
+        BasePluginV1Factory newFactory = new BasePluginV1Factory(address(algebraFactory), address(0));
         assertEq(newFactory.reflexRouter(), address(0));
     }
 

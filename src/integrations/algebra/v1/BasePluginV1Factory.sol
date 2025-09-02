@@ -37,8 +37,9 @@ contract BasePluginV1Factory is IBasePluginV1Factory {
         _;
     }
 
-    constructor(address _algebraFactory) {
+    constructor(address _algebraFactory, address _reflexRouter) {
         algebraFactory = _algebraFactory;
+        reflexRouter = _reflexRouter;
 
         // Set default fee configuration similar to V1
         _defaultFeeConfiguration = AlgebraFeeConfiguration({
