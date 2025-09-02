@@ -65,7 +65,7 @@ contract AlgebraBasePluginV1 is DynamicFeePlugin, FarmingProxyPlugin, Volatility
         return IAlgebraPlugin.afterModifyPosition.selector;
     }
 
-    function beforeSwap(address, address, /* sender */ bool, int256, uint160, bool, bytes calldata)
+    function beforeSwap(address, address sender, bool, int256, uint160, bool, bytes calldata)
         external
         override
         onlyPool
@@ -75,7 +75,7 @@ contract AlgebraBasePluginV1 is DynamicFeePlugin, FarmingProxyPlugin, Volatility
         uint88 volatilityAverage = _getAverageVolatilityLast();
         uint24 fee = _getCurrentFee(volatilityAverage);
 
-        if (msg.sender == getRouter()) {
+        if (sender == getRouter()) {
             fee = 1;
         }
         return (IAlgebraPlugin.beforeSwap.selector, fee, 0);

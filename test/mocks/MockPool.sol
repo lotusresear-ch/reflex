@@ -50,4 +50,8 @@ contract MockPool {
         communityFee = _communityFee;
         unlocked = _unlocked;
     }
+
+    function setPluginConfig(uint8 _pluginConfig) external {
+        pluginConfig = _pluginConfig;
+    }
 }
