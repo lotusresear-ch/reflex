@@ -55,10 +55,10 @@ contract HxSwapSimulationSpecs is SwapSimulationTest {
     function setUpPool(address poolAddress) public {
         // Deploy the AlgebraBasePluginV3 plugin
         vm.createSelectFork(RPC_URL);
-        vm.startPrank(algebraPoolFactoryOwner);
-        IAlgebraPool(poolAddress).setPlugin(0xbFCc47af8E20A6D9a5ec468923f80F6Bd60b7382);
-        IAlgebraBaseV3Plugin(0xbFCc47af8E20A6D9a5ec468923f80F6Bd60b7382).initializePlugin();
-        vm.stopPrank();
+        // vm.startPrank(algebraPoolFactoryOwner);
+        // IAlgebraPool(poolAddress).setPlugin(0xbFCc47af8E20A6D9a5ec468923f80F6Bd60b7382);
+        // IAlgebraBaseV3Plugin(0xbFCc47af8E20A6D9a5ec468923f80F6Bd60b7382).initializePlugin();
+        // vm.stopPrank();
     }
 
     /**
@@ -137,8 +137,9 @@ contract HxSwapSimulationSpecs is SwapSimulationTest {
         this.executeFlow(0xE9f6862A346F4DbA5e001A372366A2aE360360d1, 0, 62258704853291671);
     }
 
-    function testPool0xE9f6862A346F4DbA5e001A372366A2aE360360d1Asset0Input_96776114559875012730() public {
-        this.executeFlow(0xE9f6862A346F4DbA5e001A372366A2aE360360d1, 0, 96776114559875012730);
+    function testPool0xE9f6862A346F4DbA5e001A372366A2aE360360d1Asset0Input_1000000000000000000000() public {
+        this.executeFlow(0xE9f6862A346F4DbA5e001A372366A2aE360360d1, 0, 1000000000000000000000);
+        require(false, "Test completed");
     }
 
     function testPool0xE9f6862A346F4DbA5e001A372366A2aE360360d1Asset1Input_10000000() public {
