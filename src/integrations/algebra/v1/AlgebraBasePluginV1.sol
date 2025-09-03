@@ -3,48 +3,33 @@ pragma solidity =0.8.20;
 
 import "@cryptoalgebra/core/libraries/Plugins.sol";
 import "@cryptoalgebra/core/interfaces/plugin/IAlgebraPlugin.sol";
+import "@cryptoalgebra/core/interfaces/IAlgebraFactory.sol";
 
+import "@cryptoalgebra/plugin/plugins/DynamicFeePlugin.sol";
 import "@cryptoalgebra/plugin/plugins/FarmingProxyPlugin.sol";
-import "@cryptoalgebra/plugin/plugins/SlidingFeePlugin.sol";
 import "@cryptoalgebra/plugin/plugins/VolatilityOraclePlugin.sol";
 import "../../ReflexAfterSwap.sol";
 
-/// @title Algebra Integral 1.2.2 sliding fee plugin
-contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, VolatilityOraclePlugin, ReflexAfterSwap {
+/// @title Algebra V1-based plugin with ReflexAfterSwap functionality
+/// @notice This plugin extends AlgebraBasePluginV1 components with ReflexAfterSwap integration
+/// @dev Inherits from V1 plugin components and adds ReflexAfterSwap functionality
+contract AlgebraBasePluginV1 is DynamicFeePlugin, FarmingProxyPlugin, VolatilityOraclePlugin, ReflexAfterSwap {
     using Plugins for uint8;
-
-    /// @notice Boolean flag to enable/disable ReflexAfterSwap functionality at plugin level
-    bool public reflexEnabled;
-
-    bool private initialized;
 
     /// @inheritdoc IAlgebraPlugin
     uint8 public constant override defaultPluginConfig =
         uint8(Plugins.AFTER_INIT_FLAG | Plugins.BEFORE_SWAP_FLAG | Plugins.AFTER_SWAP_FLAG | Plugins.DYNAMIC_FEE);
 
-    constructor(address _pool, address _factory, address _pluginFactory, uint16 _baseFee, address _reflexRouter)
-        AlgebraBasePlugin(_pool, _factory, _pluginFactory)
-        SlidingFeePlugin(_baseFee)
-        ReflexAfterSwap(_reflexRouter)
-    {
-        reflexEnabled = true; // Enable reflex functionality by default
-    }
+    /// @notice Whether Reflex functionality is enabled
+    bool public reflexEnabled = true;
 
-    // ###### REFLEX CONTROL ######
-
-    /// @notice Enable or disable ReflexAfterSwap functionality
-    /// @param _enabled True to enable, false to disable
-    /// @dev Only callable by addresses with ALGEBRA_BASE_PLUGIN_MANAGER role
-    function setReflexEnabled(bool _enabled) external {
-        _authorize();
-        reflexEnabled = _enabled;
-    }
-
-    /// @notice Check if ReflexAfterSwap functionality is currently enabled
-    /// @return True if enabled, false if disabled
-    function isReflexEnabled() external view returns (bool) {
-        return reflexEnabled;
-    }
+    constructor(
+        address _pool,
+        address _factory,
+        address _pluginFactory,
+        AlgebraFeeConfiguration memory _config,
+        address _reflexRouter
+    ) AlgebraBasePlugin(_pool, _factory, _pluginFactory) DynamicFeePlugin(_config) ReflexAfterSwap(_reflexRouter) {}
 
     // ###### HOOKS ######
 
@@ -55,18 +40,7 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
 
     function afterInitialize(address, uint160, int24 tick) external override onlyPool returns (bytes4) {
         _initialize_TWAP(tick);
-
         return IAlgebraPlugin.afterInitialize.selector;
-    }
-
-    function initializePlugin() external {
-        if (initialized) {
-            return;
-        }
-        initialized = true;
-        (, int24 tick,,) = _getPoolState();
-        _updatePluginConfigInPool(defaultPluginConfig);
-        _initialize_TWAP(tick);
     }
 
     /// @dev unused
@@ -91,38 +65,42 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
         return IAlgebraPlugin.afterModifyPosition.selector;
     }
 
-    function beforeSwap(address sender, address, bool zeroToOne, int256, uint160, bool, bytes calldata)
+    function beforeSwap(address sender, address, bool, int256, uint160, bool, bytes calldata)
         external
         override
         onlyPool
         returns (bytes4, uint24, uint24)
     {
-        (, int24 currentTick,,) = _getPoolState();
-        int24 lastTick = _getLastTick();
-        uint16 newFee = _getFeeAndUpdateFactors(zeroToOne, currentTick, lastTick);
-        if (sender == getRouter()) {
-            newFee = 1;
-        }
         _writeTimepoint();
-        return (IAlgebraPlugin.beforeSwap.selector, newFee, 0);
+        uint88 volatilityAverage = _getAverageVolatilityLast();
+        uint24 fee = _getCurrentFee(volatilityAverage);
+
+        if (sender == getRouter()) {
+            fee = 1;
+        }
+        return (IAlgebraPlugin.beforeSwap.selector, fee, 0);
     }
 
+    /// @inheritdoc IAlgebraPlugin
     function afterSwap(
         address,
         address recipient,
         bool zeroToOne,
         int256,
         uint160,
-        int256 amount0Out,
-        int256 amount1Out,
+        int256 amount0,
+        int256 amount1,
         bytes calldata
     ) external override onlyPool returns (bytes4) {
-        _updateVirtualPoolTick(zeroToOne);
+        if (incentive != address(0)) {
+            // If there's an active incentive, skip ReflexAfterSwap to avoid conflicts
+            _updateVirtualPoolTick(zeroToOne);
+        }
 
-        // Only trigger ReflexAfterSwap if it's enabled
+        // Only execute ReflexAfterSwap if enabled
         if (reflexEnabled) {
-            bytes32 triggerPoolId = bytes32(uint256(uint160(msg.sender)));
-            reflexAfterSwap(triggerPoolId, amount0Out, amount1Out, zeroToOne, recipient);
+            bytes32 triggerPoolId = bytes32(uint256(uint160(pool)));
+            reflexAfterSwap(triggerPoolId, amount0, amount1, zeroToOne, recipient);
         }
 
         return IAlgebraPlugin.afterSwap.selector;
@@ -148,5 +126,17 @@ contract AlgebraBasePluginV3 is SlidingFeePlugin, FarmingProxyPlugin, Volatility
     {
         _updatePluginConfigInPool(defaultPluginConfig); // should not be called, reset config
         return IAlgebraPlugin.afterFlash.selector;
+    }
+
+    function getCurrentFee() external view override returns (uint16 fee) {
+        uint88 volatilityAverage = _getAverageVolatilityLast();
+        fee = _getCurrentFee(volatilityAverage);
+    }
+
+    /// @notice Enable or disable Reflex functionality
+    /// @param enabled Whether to enable Reflex functionality
+    function setReflexEnabled(bool enabled) external {
+        _authorize();
+        reflexEnabled = enabled;
     }
 }
