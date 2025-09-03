@@ -1,0 +1,48 @@
+# Build artifacts
+out/
+artifacts/
+cache/
+broadcast/
+node_modules/
+
+# Development files
+.env
+.env.*
+.vscode/
+.git/
+.gitignore
+
+# Test files
+test/
+*.test.*
+*.spec.*
+
+# Documentation (include only README.md)
+docs/
+
+# CI/CD
+.github/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+
+# IDE files
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Foundry specific
+lib/forge-std/
+lib/openzeppelin-contracts/
+
+# Keep only essential Algebra files needed for compilation
+lib/Algebra/audits/
+lib/Algebra/docs/
+lib/Algebra/scripts/

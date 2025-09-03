@@ -1,0 +1,63 @@
+{
+  "name": "@reflex_mev/reflex",
+  "version": "0.0.1",
+  "description": "Lotus Reflex - A sophisticated on-chain MEV capture engine for Algebra-based DEX protocols",
+  "keywords": [
+    "solidity",
+    "defi",
+    "mev",
+    "algebra",
+    "dex",
+    "ethereum",
+    "smart-contracts",
+    "foundry"
+  ],
+  "author": "Lotus Research",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lotusresear-ch/reflex.git"
+  },
+  "homepage": "https://github.com/lotusresear-ch/reflex#readme",
+  "bugs": {
+    "url": "https://github.com/lotusresear-ch/reflex/issues"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "src/",
+    "script/",
+    "foundry.toml",
+    "remappings.txt",
+    "dist/",
+    "index.ts",
+    "NPM_USAGE.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "build:npm": "tsc",
+    "test": "forge test",
+    "test:coverage": "forge coverage",
+    "clean": "forge clean && rm -rf dist/",
+    "compile": "forge build",
+    "prepublishOnly": "npm run build && npm run build:npm",
+    "publish:script": "./scripts/publish-npm.sh",
+    "format": "forge fmt",
+    "lint": "forge fmt --check"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "ethers": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

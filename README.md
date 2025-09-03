@@ -164,7 +164,97 @@ forge test --gas-report
 forge coverage
 ```
 
-## 📋 Development Setup
+## � NPM Package
+
+Lotus Reflex is available as an NPM package for easy integration into your Solidity projects.
+
+### Installation
+
+```bash
+npm install @lotus-research/reflex
+```
+
+### Usage in Solidity Projects
+
+#### With Hardhat
+
+Add to your `hardhat.config.js` or `hardhat.config.ts`:
+
+```javascript
+// hardhat.config.js
+module.exports = {
+  solidity: "0.8.20",
+  // No special configuration needed
+};
+```
+
+Then import directly in your Solidity files:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.20;
+
+import "@lotus-research/reflex/src/ReflexRouter.sol";
+import "@lotus-research/reflex/src/integrations/algebra/full/AlgebraBasePluginV3.sol";
+
+contract MyProtocol {
+    // Integrate Reflex contracts
+}
+```
+
+#### With Foundry
+
+Add to your `foundry.toml`:
+
+```toml
+[profile.default]
+remappings = [
+    "@reflex/=node_modules/@lotus-research/reflex/src/",
+]
+```
+
+```solidity
+import "@reflex/ReflexRouter.sol";
+import "@reflex/integrations/algebra/full/AlgebraBasePluginV3.sol";
+```
+
+#### Direct Import
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.20;
+
+import "@lotus-research/reflex/src/ReflexRouter.sol";
+import "@lotus-research/reflex/src/integrations/algebra/full/AlgebraBasePluginV3.sol";
+
+contract MyProtocol {
+    // Integrate Reflex contracts
+}
+```
+
+#### TypeScript Integration
+
+```typescript
+import { contracts, interfaces, version } from "@lotus-research/reflex";
+
+// Get contract paths
+const reflexRouter = contracts.ReflexRouter;
+const plugin = contracts.AlgebraBasePluginV3;
+const splitter = contracts.FundsSplitter;
+
+console.log(`Using Reflex v${version}`);
+```
+
+### Available Exports
+
+- **Core Contracts**: `ReflexRouter`, `ReflexAfterSwap`, `FundsSplitter`
+- **Algebra Integration**: `AlgebraBasePluginV3`
+- **Interfaces**: `IReflexRouter`, `IReflexQuoter`
+- **Utilities**: `GracefulReentrancyGuard`, `DexTypes`
+
+For detailed NPM usage documentation, see [NPM_USAGE.md](NPM_USAGE.md).
+
+## �📋 Development Setup
 
 ### Prerequisites
 
