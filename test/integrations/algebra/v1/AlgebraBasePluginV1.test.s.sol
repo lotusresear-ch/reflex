@@ -155,8 +155,8 @@ contract AlgebraBasePluginV1Test is Test {
 
         vm.prank(address(pool));
         (bytes4 selector, uint24 fee, uint24 fee2) = plugin.beforeSwap(
+            address(reflexRouter), // ReflexRouter as sender,
             address(0),
-            address(reflexRouter), // ReflexRouter as sender
             true,
             1000,
             0,
@@ -463,7 +463,7 @@ contract AlgebraBasePluginV1Test is Test {
 
         vm.prank(address(pool));
         (, uint24 reflexFee,) =
-            plugin.beforeSwap(address(0), address(reflexRouter), zeroToOne, amountSpecified, 0, false, "");
+            plugin.beforeSwap(address(reflexRouter), address(0), zeroToOne, amountSpecified, 0, false, "");
 
         vm.prank(address(pool));
         (, uint24 normalFee,) = plugin.beforeSwap(address(0), randomSender, zeroToOne, amountSpecified, 0, false, "");
@@ -560,7 +560,7 @@ contract AlgebraBasePluginV1Test is Test {
 
         // Get fee for ReflexRouter
         vm.prank(address(pool));
-        (, uint24 reflexFee,) = plugin.beforeSwap(address(0), address(reflexRouter), true, 1000, 0, false, "");
+        (, uint24 reflexFee,) = plugin.beforeSwap(address(reflexRouter), address(0), true, 1000, 0, false, "");
 
         assertTrue(normalFee > 1, "Normal users should pay dynamic fee");
         assertEq(reflexFee, 1, "ReflexRouter should get minimal fee regardless of dynamic fee");
